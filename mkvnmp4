@@ -40,7 +40,11 @@ Then, you must enter${NORMAL} ${RED}`y` or `N`${NORMAL} ${BLUE}to confirm or den
 EOF
 }
 
-SHOW_OUTPUT &&
+if [[ $(SHOW_OUTPUT) == "" ]]; then
+    echo "We were unable to find any duplicate files."
+    echo "Please, move to another directory and try again."
+    exit 0
+fi
 echo "Please, examine the above files to confirm they are ready to be removed."
 echo "The next step is `nuclear`, as there is no going back after files are deleted. "
 echo "Usually...."

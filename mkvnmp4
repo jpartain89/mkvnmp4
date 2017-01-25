@@ -67,7 +67,7 @@ if [[ $(SHOW_OUTPUT) == "" ]]; then
     HELP_VERSION && exit 0
 fi
 echo "Please, examine the above files to confirm they are ready to be removed."
-echo "The next step is `nuclear`, as there is no going back after files are deleted. "
+echo "The next step is \"nuclear\", as there is no going back after files are deleted. "
 echo "Usually...."
 press_enter &&
 CONFIRM_DEL && HELP_VERSION && exit 0

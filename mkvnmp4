@@ -8,7 +8,7 @@ PROGRAM_NAME="mkvnmp4"
 PROGRAM_AUTHOR="Justin Partain"
 PROGRAM_AUTHOR_CONTACT="$PROGRAM_NAME_noreply@jpcdi.com"
 PROGRAM_AUTHOR_FULL="JPCDI, JPartain89 and $PROGRAM_AUTHOR"
-VERSION="1.0"
+VERSION="1.2"
 USERNAME="$(logname)"
 
 source allunix

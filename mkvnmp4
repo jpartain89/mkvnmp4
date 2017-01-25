@@ -38,7 +38,7 @@ CONFIRM_DEL() {
 
 SHOW_OUTPUT() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] && echo "$file" ;
+        [[ -e ${file%.mkv}.mp4 ]] && echo "${file%.mkv}.mp4" ;
     done < <(find . -type f -iname "*.mkv" -exec echo {} \; )
 }
 

@@ -22,8 +22,7 @@ else
 fi
 USER_BIN="$HOME/bin"
 GIT_HOME="$HOME/git"
-if [ ! -e "$HOME/log" ]; then mkdir "$HOME/log"; fi
-if [ ! -e "$LOGFILE" ]; then touch "$LOGFILE"; fi
+
 if [[ $(git -C "$GIT_HOME/$PROGRAM_NAME" pull) != "Already up-to-date." ]]; then
     "$GIT_HOME/$PROGRAM_NAME/$PROGRAM_NAME" && exit 0
 fi

@@ -38,7 +38,7 @@ CONFIRM_DEL() {
 
 SHOW_OUTPUT() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] && echo "${file%.mkv}.mp4" ;
+        [[ -e ${file%.mkv}.mp4 ]] && echo "$file" ;
     done < <(find . -type f -iname "*.mkv" -exec echo {} \; )
 }
 
@@ -61,9 +61,12 @@ if [[ $(SHOW_OUTPUT) == "" ]]; then
     echo "We were unable to find any duplicate files."
     echo "Please, move to another directory and try again."
     HELP_VERSION && exit 0
+else
+    echo "Please, examine the above files to confirm they are ready to be removed."
+    echo "The next step is \"nuclear\", as there is no going back after files are deleted. "
+    echo "Usually...."
+    press_enter &&
+    CONFIRM_DEL &&
+    HELP_VERSION &&
+    exit 0
 fi
-echo "Please, examine the above files to confirm they are ready to be removed."
-echo "The next step is \"nuclear\", as there is no going back after files are deleted. "
-echo "Usually...."
-press_enter &&
-CONFIRM_DEL && HELP_VERSION && exit 0

@@ -57,6 +57,8 @@ Then, you must enter${NORMAL} ${RED}`y` or `N`${NORMAL} ${BLUE}to confirm or den
 EOF
 }
 
+trap 'HELP_VERSION' SIGHUP SIGINT SIGTERM
+
 if [[ $(SHOW_OUTPUT) == "" ]]; then
     echo "We were unable to find any duplicate files."
     echo "Please, move to another directory and try again."

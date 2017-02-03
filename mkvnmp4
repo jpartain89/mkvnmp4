@@ -20,9 +20,9 @@ TV_EXT="${EXTERNAL}/TV"
 MOVIES_EXT="${EXTERNAL}/Movies"
 PORN_EXT="${EXTERNAL}/Porn"
 
-#git_updating
-#git_cloning
-#homebin_install
+git_updating
+git_cloning
+homebin_install
 
 USAGE() {
 cat <<- EOF

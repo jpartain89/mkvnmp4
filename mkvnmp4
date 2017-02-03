@@ -1,68 +1,118 @@
 #!/bin/bash -e
 
-# This script is specifically for finding an .mp4 and its corresponding .mkv
-# file for removal.
-
 # Program information
 PROGRAM_NAME="mkvnmp4"
+PROGRAM_AUTHOR="Justin Partain"
 PROGRAM_AUTHOR_CONTACT="${PROGRAM_NAME}_noreply@jpcdi.com"
 PROGRAM_AUTHOR_FULL="JPCDI, JPartain89 and $PROGRAM_AUTHOR"
-VERSION="1.5.0"
+VERSION="1.0.0"
 
 source allunix
-git_cloning
-git_updating
-homebin_install
+
+if [[ "$(uname)" == "Darwin" ]]; then
+    EXTERNAL="/Volumes/RAID_EXT"
+else
+    echo "Currently, only meant for macOS."
+    exit 1
+fi
+tmp_file="$(mktemp)"
+TV_EXT="${EXTERNAL}/TV"
+MOVIES_EXT="${EXTERNAL}/Movies"
+PORN_EXT="${EXTERNAL}/Porn"
+
+#git_updating
+#git_cloning
+#homebin_install
+
+USAGE() {
+cat <<- EOF
+${PROGRAM_NAME}
+
+This program is to remove the duplicated .mkv files when the corresponding .mp4 file is present.
+
+${RED}Currently, this does not make sure the new, .mp4 version is not currently being worked on - duplicated from the .mkv - or even correctly sourced from the .mkv.
+MAKE SURE TO DOUBLE CHECK FIRST!${NORMAL}
+EOF
+}
 
 CONFIRM_DEL() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] && rm -f "$file" ;
+        [[ -e ${file%.mkv}.mp4 ]] &&
+        echo "${RED}Erasing ${file}....${NORMAL}"
+        echo ""
+        rm -f "$file" ;
     done < <(find . -type f -iname "*.mkv" -exec echo {} \; )
 }
 
 SHOW_OUTPUT() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] &&
-        echo "$file ${RED}<--THIS ONE TO BE REMOVED${NORMAL} " &
-        echo "$file" ;
-    done < <(find . -type f -iname "*.mkv" -exec echo {} \; )
+       [[ -e ${file%.mkv}.mp4 ]] &&
+       echo "
+       $file ${RED}<--THIS ONE${NORMAL}
+       ${file%.mkv}.mp4";
+   done < <(find . -type f -iname "*.mkv" -exec echo {} \; ) | sudo tee "$tmp_file"
 }
 iSHOW_OUTPUT() {
     SHOW_OUTPUT | tee "$tmp_file"
 }
-
-
-USAGE() {
+kSHOW_OUTPUT() {
+    if [[ $(iSHOW_OUTPUT) != "" ]]; then
 cat <<- EOF
-$PROGRAM_NAME
 
-${RED}This script must be called from within the directory you want to work on,
-or you must assume it will recursively search and take action from within the
-entire directory tree below your current location.${NORMAL}
-
-${BLUE}First, we will show${NORMAL} ${RED}what${NORMAL} ${BLUE}files will be removed.
-This list will be the specific .mkv files that are duplicates, shown without
-their .mp4 dopplegangers.
-Then, you must enter${NORMAL} ${RED}`y` or `N`${NORMAL} ${BLUE}to confirm or deny the deletion.${NORMAL}
+Please, examine the above files to confirm they are ready to be removed.
+The next step is ${RED}"nuclear"${NORMAL}, as there is no going back after files are deleted.
+Usually....
 EOF
+        press_enter &&
+        CONFIRM_DEL &&
+        echo "Finished Deleting...."
+        echo ""
+    fi
 }
 
 trap 'rm $tmp_file; HELP_VERSION; exit 1' SIGHUP SIGINT SIGTERM
 
-if [[ $(iSHOW_OUTPUT) == "" ]]; then
-    echo "We were unable to find any duplicate files."
-    echo "Please, move to another directory and try again."
-    echo ""
-    HELP_VERSION &&
-    exit 0
-else
-    cat $tmp_file
-    echo "Please, examine the above files to confirm they are ready to be removed."
-    echo "The next step is \"nuclear\", as there is no going back after files are deleted. "
-    echo "Usually...."
-    press_enter &&
-    CONFIRM_DEL &&
-    echo ""
-    HELP_VERSION &&
-    exit 0
-fi
+cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
+
+options=(
+    1 "TV"
+    2 "Movies"
+    3 "Porn"
+    )
+
+choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+
+for choice in $choices; do
+    case $choice in
+        1 )
+            for f in ${TV_EXT}/*/*/ ; do
+                cd "$f" || continue;
+                echo "${PWD}";
+                SHOW_OUTPUT;
+                kSHOW_OUTPUT;
+                cd "$OLDPWD" || ! break;
+            done || ! cd - >&2;;
+        2 )
+            for f in ${MOVIES_EXT}/*/*/ ; do
+                cd "$f" || continue;
+                echo "${PWD}";
+                SHOW_OUTPUT;
+                kSHOW_OUTPUT;
+                cd "$OLDPWD" || ! break;
+            done || ! cd - >&2;;
+        3)
+            for f in ${PORN_EXT}/*/*/ ; do
+                cd "$f" || continue;
+                echo "${PWD}";
+                SHOW_OUTPUT;
+                kSHOW_OUTPUT;
+                cd "$OLDPWD" || ! break;
+            done || ! cd - >&2;;
+        * )
+            USAGE; HELP_VERSION; exit 1;;
+    esac
+done
+
+echo ""
+HELP_VERSION &&
+exit 0

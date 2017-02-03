@@ -5,30 +5,15 @@
 
 # Program information
 PROGRAM_NAME="mkvnmp4"
-PROGRAM_AUTHOR="Justin Partain"
-PROGRAM_AUTHOR_CONTACT="$PROGRAM_NAME_noreply@jpcdi.com"
+PROGRAM_AUTHOR_CONTACT="${PROGRAM_NAME}_noreply@jpcdi.com"
 PROGRAM_AUTHOR_FULL="JPCDI, JPartain89 and $PROGRAM_AUTHOR"
 VERSION="1.2"
-USERNAME="$(logname)"
 
 source allunix
 
-if [[ "$(uname)" == "Darwin" ]]; then
-    HOME="/Users/$USERNAME"
-    OWNER="$USERNAME:admin"
-else
-    HOME="/home/$USERNAME"
-    OWNER="$USERNAME:$USERNAME"
-fi
-PROG_PRE="$HOME/bin"
-GIT_HOME="$HOME/git"
-
-if [[ $(git -C "$GIT_HOME/$PROGRAM_NAME" pull) != "Already up-to-date." ]]; then
-    "$GIT_HOME/$PROGRAM_NAME/$PROGRAM_NAME" && exit 0
-fi
-
 git_cloning
-userhome_bin_install
+git_updating
+homebin_install
 
 CONFIRM_DEL() {
     while IFS= read -r file; do

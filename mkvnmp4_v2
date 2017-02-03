@@ -51,7 +51,7 @@ kSHOW_OUTPUT() {
     fi
 }
 
-cmd=(dialog --keep-tite --menu "Select options: " ) # 22 76 16
+cmd=(dialog --keep-tite --menu "Select options: "  10 6) 
 
 options=(
     1 "TV"

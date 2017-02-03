@@ -7,25 +7,30 @@
 PROGRAM_NAME="mkvnmp4"
 PROGRAM_AUTHOR_CONTACT="${PROGRAM_NAME}_noreply@jpcdi.com"
 PROGRAM_AUTHOR_FULL="JPCDI, JPartain89 and $PROGRAM_AUTHOR"
-VERSION="1.2"
+VERSION="1.5.0"
 
 source allunix
-
 git_cloning
 git_updating
 homebin_install
 
 CONFIRM_DEL() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] && rm -f "${file%.mkv}.mp4" ;
+        [[ -e ${file%.mkv}.mp4 ]] && rm -f "$file" ;
     done < <(find . -type f -iname "*.mkv" -exec echo {} \; )
 }
 
 SHOW_OUTPUT() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] && echo "$file" ;
+        [[ -e ${file%.mkv}.mp4 ]] &&
+        echo "$file ${RED}<--THIS ONE TO BE REMOVED${NORMAL} " &
+        echo "$file" ;
     done < <(find . -type f -iname "*.mkv" -exec echo {} \; )
 }
+iSHOW_OUTPUT() {
+    SHOW_OUTPUT | tee "$tmp_file"
+}
+
 
 USAGE() {
 cat <<- EOF
@@ -42,15 +47,16 @@ Then, you must enter${NORMAL} ${RED}`y` or `N`${NORMAL} ${BLUE}to confirm or den
 EOF
 }
 
-trap 'HELP_VERSION' SIGHUP SIGINT SIGTERM
+trap 'rm $tmp_file; HELP_VERSION; exit 1' SIGHUP SIGINT SIGTERM
 
-if [[ $(SHOW_OUTPUT) == "" ]]; then
+if [[ $(iSHOW_OUTPUT) == "" ]]; then
     echo "We were unable to find any duplicate files."
     echo "Please, move to another directory and try again."
     echo ""
     HELP_VERSION &&
     exit 0
 else
+    cat $tmp_file
     echo "Please, examine the above files to confirm they are ready to be removed."
     echo "The next step is \"nuclear\", as there is no going back after files are deleted. "
     echo "Usually...."

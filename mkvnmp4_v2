@@ -1,0 +1,90 @@
+#!/bin/bash -e
+
+# Program information
+PROGRAM_NAME="mkvnmp4_v2"
+PROGRAM_AUTHOR="Justin Partain"
+PROGRAM_AUTHOR_CONTACT="${PROGRAM_NAME}_noreply@jpcdi.com"
+PROGRAM_AUTHOR_FULL="JPCDI, JPartain89 and $PROGRAM_AUTHOR"
+VERSION="1.0.0"
+
+source allunix
+
+if [[ "$(uname)" == "Darwin" ]]; then
+    EXTERNAL="/Volumes/RAID_EXT"
+else
+    echo "Currently, only meant for macOS."
+    exit 1
+fi
+tmp_file="$(mktemp)"
+TV_EXT="${EXTERNAL}/TV"
+MOVIES_EXT="${EXTERNAL}/Movies"
+PORN_EXT="${EXTERNAL}/Porn"
+
+#git_updating
+#git_cloning
+#homebin_install
+
+CONFIRM_DEL() {
+    while IFS= read -r file; do
+        [[ -e ${file%.mkv}.mp4 ]] && rm -f "$file" ;
+    done < <(find . -type f -iname "*.mkv" -exec echo {} \; )
+}
+
+SHOW_OUTPUT() {
+    while IFS= read -r file; do
+       [[ -e ${file%.mkv}.mp4 ]] &&
+       echo "$file ${RED}<--THIS ONE TO BE REMOVED${NORMAL} " &&
+       echo "${file%.mkv}.mp4";
+   done < <(find . -type f -iname "*.mkv" -exec echo {} \; ) | sudo tee "$tmp_file"
+}
+iSHOW_OUTPUT() {
+    SHOW_OUTPUT | tee "$tmp_file"
+}
+kSHOW_OUTPUT() {
+    if [[ $(iSHOW_OUTPUT) != "" ]]; then
+        cat $tmp_file
+        echo "Please, examine the above files to confirm they are ready to be removed.
+        The next step is \"nuclear\", as there is no going back after files are deleted.
+        Usually...."
+        press_enter &&
+        CONFIRM_DEL
+    fi
+}
+
+cmd=(dialog --keep-tite --menu "Select options: " 22 76 16)
+
+options=(
+    1 "TV"
+    2 "Movies"
+    3 "Porn"
+    )
+
+choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+
+for choice in $choices; do
+    case $choice in
+        1 )
+            for f in ${TV_EXT}/*/*/ ; do
+                cd "$f" || continue;
+                SHOW_OUTPUT;
+                kSHOW_OUTPUT;
+                cd "$OLDPWD" || ! break;
+            done || ! cd - >&2;;
+        2 )
+            for f in ${MOVIES_EXT}/*/*/ ; do
+                cd "$f" || continue;
+                SHOW_OUTPUT;
+                kSHOW_OUTPUT;
+                cd "$OLDPWD" || ! break;
+            done || ! cd - >&2;;
+        3)
+            for f in ${PORN_EXT}/*/*/ ; do
+                cd "$f" || continue;
+                SHOW_OUTPUT;
+                kSHOW_OUTPUT;
+                cd "$OLDPWD" || ! break;
+            done || ! cd - >&2;;
+    esac
+done
+
+HELP_VERSION && exit 0

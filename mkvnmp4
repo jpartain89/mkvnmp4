@@ -11,6 +11,7 @@ source allunix
 
 if [[ "$(uname)" == "Darwin" ]]; then
     EXTERNAL="/Volumes/RAID_EXT"
+    LOGFILE="/Users/jpartain89/log/${PROGRAM_NAME}.log"
 else
     echo "Currently, only meant for macOS."
     exit 1

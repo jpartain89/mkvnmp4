@@ -69,6 +69,15 @@ EOF
         echo ""
     fi
 }
+FINAL_OUTPUT() {
+    for f in $FINAL_DIR ; do
+        cd "$f" || continue;
+        echo "${PWD}";
+        SHOW_OUTPUT;
+        kSHOW_OUTPUT;
+        cd "$OLDPWD" || ! break;
+    done || ! cd - >&2
+}
 
 trap 'rm $tmp_file; HELP_VERSION; exit 1' SIGHUP SIGINT SIGTERM
 
@@ -85,29 +94,14 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 for choice in $choices; do
     case $choice in
         1 )
-            for f in ${TV_EXT}/*/*/ ; do
-                cd "$f" || continue;
-                echo "${PWD}";
-                SHOW_OUTPUT;
-                kSHOW_OUTPUT;
-                cd "$OLDPWD" || ! break;
-            done || ! cd - >&2;;
+            FINAL_DIR="${TV_EXT}/*/*/";
+            FINAL_OUTPUT | timestamp;;
         2 )
-            for f in ${MOVIES_EXT}/*/*/ ; do
-                cd "$f" || continue;
-                echo "${PWD}";
-                SHOW_OUTPUT;
-                kSHOW_OUTPUT;
-                cd "$OLDPWD" || ! break;
-            done || ! cd - >&2;;
+            FINAL_DIR="${MOVIES_EXT}/*/*/";
+            FINAL_OUTPUT | timestamp;;
         3)
-            for f in ${PORN_EXT}/*/*/ ; do
-                cd "$f" || continue;
-                echo "${PWD}";
-                SHOW_OUTPUT;
-                kSHOW_OUTPUT;
-                cd "$OLDPWD" || ! break;
-            done || ! cd - >&2;;
+            FINAL_DIR="${PORN_EXT}/*/*/";
+            FINAL_OUTPUT | timestamp;;
         * )
             USAGE; HELP_VERSION; exit 1;;
     esac

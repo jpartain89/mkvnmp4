@@ -3,8 +3,6 @@
 # Program information
 PROGRAM_NAME="mkvnmp4"
 PROGRAM_AUTHOR="Justin Partain"
-PROGRAM_AUTHOR_CONTACT="${PROGRAM_NAME}_noreply@jpcdi.com"
-PROGRAM_AUTHOR_FULL="JPCDI, JPartain89 and $PROGRAM_AUTHOR"
 VERSION="1.0.1"
 
 source allunix
@@ -20,22 +18,21 @@ TV_EXT="${EXTERNAL}/TV"
 MOVIES_EXT="${EXTERNAL}/Movies"
 PORN_EXT="${EXTERNAL}/Porn"
 
-git_updating
-git_cloning
-homebin_install
+home_bin_git_install
 
-USAGE() {
-cat <<- EOF
+function USAGE() {
+cat << EOF
 ${PROGRAM_NAME}
 
-This program is to remove the duplicated .mkv files when the corresponding .mp4 file is present.
+    This program is to remove the duplicated .mkv files when the corresponding .mp4 file is present.
 
 ${RED}Currently, this does not make sure the new, .mp4 version is not currently being worked on - duplicated from the .mkv - or even correctly sourced from the .mkv.
-MAKE SURE TO DOUBLE CHECK FIRST!${NORMAL}
+
+            MAKE SURE TO DOUBLE CHECK FIRST!${NORMAL}
 EOF
 }
 
-CONFIRM_DEL() {
+function CONFIRM_DEL() {
     while IFS= read -r file; do
         [[ -e ${file%.mkv}.mp4 ]] &&
         echo "${RED}Erasing ${file}....${NORMAL}"
@@ -44,7 +41,7 @@ CONFIRM_DEL() {
     done < <(find . -type f -iname "*.mkv" -exec echo {} \; )
 }
 
-SHOW_OUTPUT() {
+function SHOW_OUTPUT() {
     while IFS= read -r file; do
        [[ -e ${file%.mkv}.mp4 ]] &&
        echo "
@@ -52,16 +49,18 @@ SHOW_OUTPUT() {
        ${file%.mkv}.mp4";
    done < <(find . -type f -iname "*.mkv" -exec echo {} \; ) | sudo tee "$tmp_file"
 }
-iSHOW_OUTPUT() {
+function iSHOW_OUTPUT() {
     SHOW_OUTPUT | tee "$tmp_file"
 }
-kSHOW_OUTPUT() {
+function kSHOW_OUTPUT() {
     if [[ $(iSHOW_OUTPUT) != "" ]]; then
-cat <<- EOF
+cat << EOF
 
 Please, examine the above files to confirm they are ready to be removed.
+
 The next step is ${RED}"nuclear"${NORMAL}, as there is no going back after files are deleted.
 Usually....
+
 EOF
         press_enter &&
         CONFIRM_DEL &&

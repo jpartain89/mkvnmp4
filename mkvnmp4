@@ -1,24 +1,30 @@
 #!/bin/bash -e
 
 # Program information
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
-PROGRAM_AUTHOR="Justin Partain"
-VERSION="1.0.1"
+PROGRAM_LOCATION="${DIR}/${PROGRAM_NAME}"
+VERSION="1.0.2"
 
-source allunix
+if [[ ! -e "$(command -v allunix)" ]]; then
+    echo "AllUnix file is missing."
+    wget -O - http://bit.ly/jp_allunix | bash
+fi
+
+. "$(command -v allunix)"
+no_sudo
 
 if [[ "$(uname)" == "Darwin" ]]; then
-    EXTERNAL="/Volumes/RAID_EXT"
+    EXTERNAL="/Volumes/8TB_EXT"
 else
     echo "Currently, only meant for macOS."
     exit 1
 fi
+
 tmp_file="$(mktemp)"
 TV_EXT="${EXTERNAL}/TV"
 MOVIES_EXT="${EXTERNAL}/Movies"
 PORN_EXT="${EXTERNAL}/Porn"
-
-home_bin_git_install
 
 function USAGE() {
 cat << EOF

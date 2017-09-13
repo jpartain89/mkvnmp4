@@ -77,19 +77,44 @@ EOF
 
 trap 'rm $tmp_file; HELP_VERSION; exit 1' SIGHUP SIGINT SIGTERM
 
-cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
+function DIALOG() {
+    cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
 
-options=(
-    1 "TV"
-    2 "Movies"
-    3 "Porn"
-    )
+    options=(
+        1 "TV"
+        2 "Movies"
+        3 "Porn"
+        )
 
-choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+    choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+}
+
+
+choices=$(osascript -l JavaScript -e'
+    var app = Application.currentApplication()
+    app.includeStandardAdditions = true
+
+    var locationChoices = ["TV", "Movies", "Porn", "Custom"]
+    var locationList = app.chooseFromList(locationChoices, {
+        withPrompt: "Select options:",
+        defaultItems: ["Custom"]
+    })
+    locationList' 2>&1)
+function osascriptCustomSelector() {
+    directories="$(osascript -l JavaScript -e '
+        var app = Application.currentApplication()
+        app.includeStandardAdditions = true
+
+        var outputFolder = app.chooseFolder({
+            withPrompt: "Please select an output folder:",
+            multipleSelectionsAllowed: true
+        })
+        outputFolder' | cut -d '"' -f2)"
+}
 
 for choice in $choices; do
     case $choice in
-        1 )
+        TV )
             for f in ${TV_EXT}/*/*/ ; do
                 cd "$f" || continue;
                 echo "${PWD}";
@@ -97,7 +122,7 @@ for choice in $choices; do
                 kSHOW_OUTPUT;
                 cd "$OLDPWD" || ! break;
             done || ! cd - >&2;;
-        2 )
+        Movies )
             for f in ${MOVIES_EXT}/*/*/ ; do
                 cd "$f" || continue;
                 echo "${PWD}";
@@ -105,7 +130,7 @@ for choice in $choices; do
                 kSHOW_OUTPUT;
                 cd "$OLDPWD" || ! break;
             done || ! cd - >&2;;
-        3)
+        Porn )
             for f in ${PORN_EXT}/*/*/ ; do
                 cd "$f" || continue;
                 echo "${PWD}";
@@ -113,6 +138,17 @@ for choice in $choices; do
                 kSHOW_OUTPUT;
                 cd "$OLDPWD" || ! break;
             done || ! cd - >&2;;
+        Custom )
+            osascriptCustomSelector;
+            myFiles=("$directories")
+            for f in "${myFiles[@]}" ; do
+                cd "$f" || continue;
+                echo "${PWD}";
+                SHOW_OUTPUT;
+                kSHOW_OUTPUT;
+                cd "$OLDPWD" || ! break;
+            done || ! cd - >&2;
+            unset f myFiles directories;;
         * )
             USAGE; HELP_VERSION; exit 1;;
     esac

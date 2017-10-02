@@ -186,9 +186,7 @@ for choice in $choicesAction; do
                         for f in ${TV_EXT}/*/*/ ; do
                             cd "$f" || continue;
                             echo "${PWD}";
-                            variableOutput;
-                            echo "Press enter to continue"
-                            read -r
+                            variableOutput
                             cd "$OLDPWD" || ! break;
                         done || ! cd - >&2;;
                     Movies )

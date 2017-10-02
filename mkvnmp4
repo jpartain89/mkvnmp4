@@ -38,6 +38,21 @@ ${RED}Currently, this does not make sure the new, .mp4 version is not currently 
 EOF
 }
 
+function variableOutput() {
+    while IFS= read -r file; do
+        if [[ ! -e ${file%.mkv}.mp4 ]]; then
+            echo ""
+            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            osascript -e "
+                set filePath to POSIX file \"$file\"
+                set filePath to filePath as alias
+                tell application \"Subler\"
+                    add to queue filePath
+                end tell"
+        fi
+    done < <(find . -type f -iname "*.mkv" -exec echo {} \; ) | sudo tee "$tmp_file"
+}
+
 function CONFIRM_DEL() {
     while IFS= read -r file; do
         [[ -e ${file%.mkv}.mp4 ]] &&
@@ -55,6 +70,7 @@ function SHOW_OUTPUT() {
        ${file%.mkv}.mp4";
    done < <(find . -type f -iname "*.mkv" -exec echo {} \; ) | sudo tee "$tmp_file"
 }
+
 function iSHOW_OUTPUT() {
     SHOW_OUTPUT | tee "$tmp_file"
 }
@@ -77,19 +93,23 @@ EOF
 
 trap 'rm $tmp_file; HELP_VERSION; exit 1' SIGHUP SIGINT SIGTERM
 
-function DIALOG() {
-    cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
+cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
 
-    options=(
-        1 "TV"
-        2 "Movies"
-        3 "Porn"
-        )
+mediaOptions=(
+    1 "TV"
+    2 "Movies"
+    3 "Porn"
+)
 
-    choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
-}
+actionOptions=(
+    1 "Subler"
+    2 "Delete_Duplicates"
+)
 
+choicesAction=$("${cmd[@]}" "${actionOptions[@]}" 2>&1 >/dev/tty)
+choicesMedia=$("${cmd[@]}" "${mediaOptions[@]}" 2>&1 >/dev/tty)
 
+function appleScriptFunction() {
 choices=$(osascript -l JavaScript -e'
     var app = Application.currentApplication()
     app.includeStandardAdditions = true
@@ -111,7 +131,9 @@ function osascriptCustomSelector() {
         })
         outputFolder' | cut -d '"' -f2)"
 }
+}
 
+function finalDelete() {
 for choice in $choices; do
     case $choice in
         TV )
@@ -140,7 +162,7 @@ for choice in $choices; do
             done || ! cd - >&2;;
         Custom )
             osascriptCustomSelector;
-            myFiles=("$directories")
+            myFiles=("$directories"/*)
             for f in "${myFiles[@]}" ; do
                 cd "$f" || continue;
                 echo "${PWD}";
@@ -151,6 +173,55 @@ for choice in $choices; do
             unset f myFiles directories;;
         * )
             USAGE; HELP_VERSION; exit 1;;
+    esac
+done
+}
+
+for choice in $choicesAction; do
+    case $choice in
+        1 | Subler )
+            for choice2 in $choicesMedia; do
+                case $choice2 in
+                    1 | TV )
+                        for f in ${TV_EXT}/*/*/ ; do
+                            cd "$f" || continue;
+                            echo "${PWD}";
+                            variableOutput;
+                            echo "Press enter to continue"
+                            read -r
+                            cd "$OLDPWD" || ! break;
+                        done || ! cd - >&2;;
+                    Movies )
+                        for f in ${MOVIES_EXT}/*/*/ ; do
+                            cd "$f" || continue;
+                            echo "${PWD}";
+                            variableOutput;
+                            cd "$OLDPWD" || ! break;
+                        done || ! cd - >&2;;
+                    Porn )
+                        for f in ${PORN_EXT}/*/*/ ; do
+                            cd "$f" || continue;
+                            echo "${PWD}";
+                            variableOutput;
+                            cd "$OLDPWD" || ! break;
+                        done || ! cd - >&2;;
+                    Custom )
+                        osascriptCustomSelector;
+                        myFiles=("$directories"/*)
+                        for f in "${myFiles[@]}" ; do
+                            cd "$f" || continue;
+                            echo "${PWD}";
+                            variableOutput;
+                            cd "$OLDPWD" || ! break;
+                        done || ! cd - >&2;
+                        unset f myFiles directories;;
+                    * )
+                        USAGE; HELP_VERSION; exit 1;;
+                esac
+            done
+            ;;
+        Delete_Duplicates )
+            finalDelete;;
     esac
 done
 

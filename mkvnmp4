@@ -134,9 +134,9 @@ function osascriptCustomSelector() {
 }
 
 function finalDelete() {
-for choice in $choices; do
+for choice in $choicesMedia; do
     case $choice in
-        TV )
+        1 | TV )
             for f in ${TV_EXT}/*/*/ ; do
                 cd "$f" || continue;
                 echo "${PWD}";
@@ -144,7 +144,7 @@ for choice in $choices; do
                 kSHOW_OUTPUT;
                 cd "$OLDPWD" || ! break;
             done || ! cd - >&2;;
-        Movies )
+        2 | Movies )
             for f in ${MOVIES_EXT}/*/*/ ; do
                 cd "$f" || continue;
                 echo "${PWD}";
@@ -152,7 +152,7 @@ for choice in $choices; do
                 kSHOW_OUTPUT;
                 cd "$OLDPWD" || ! break;
             done || ! cd - >&2;;
-        Porn )
+        3 | Porn )
             for f in ${PORN_EXT}/*/*/ ; do
                 cd "$f" || continue;
                 echo "${PWD}";
@@ -160,7 +160,7 @@ for choice in $choices; do
                 kSHOW_OUTPUT;
                 cd "$OLDPWD" || ! break;
             done || ! cd - >&2;;
-        Custom )
+        4 | Custom )
             osascriptCustomSelector;
             myFiles=("$directories"/*)
             for f in "${myFiles[@]}" ; do
@@ -189,7 +189,7 @@ for choice in $choicesAction; do
                             variableOutput
                             cd "$OLDPWD" || ! break;
                         done || ! cd - >&2;;
-                    Movies )
+                    2 | Movies )
                         for f in ${MOVIES_EXT}/*/*/ ; do
                             cd "$f" || continue;
                             echo "${PWD}";
@@ -218,7 +218,7 @@ for choice in $choicesAction; do
                 esac
             done
             ;;
-        Delete_Duplicates )
+        2 | Delete_Duplicates )
             finalDelete;;
     esac
 done

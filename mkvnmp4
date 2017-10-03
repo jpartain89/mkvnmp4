@@ -190,7 +190,7 @@ for choice in $choicesAction; do
                             cd "$OLDPWD" || ! break;
                         done || ! cd - >&2;;
                     2 | Movies )
-                        for f in ${MOVIES_EXT}/*/*/ ; do
+                        for f in ${MOVIES_EXT}/* ; do
                             cd "$f" || continue;
                             echo "${PWD}";
                             variableOutput;

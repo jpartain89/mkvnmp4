@@ -16,16 +16,21 @@ git_local_bin_install &&
 no_sudo
 
 if [[ "$(uname)" == "Darwin" ]]; then
-    EXTERNAL="/Volumes/8TB_EXT"
+    if [ -d /Volumes/8TB_EXT ]; then
+        extDrive="/Volumes/8TB_EXT"
+    else
+        echo "The default external drive is not found."
+        read -r -p "Please enter the full path to the external drive. " extDrive
+    fi
 else
     echo "Currently, only meant for macOS."
     exit 1
 fi
 
 tmp_file="$(mktemp)"
-TV_EXT="${EXTERNAL}/TV"
-MOVIES_EXT="${EXTERNAL}/Movies"
-PORN_EXT="${EXTERNAL}/Porn"
+TV_EXT="${extDrive}/TV/*/*/"
+MOVIES_EXT="${extDrive}/Movies/*"
+PORN_EXT="${extDrive}/Porn/*/*/*"
 
 function USAGE() {
 cat << EOF
@@ -149,7 +154,7 @@ function finalDelete() {
     for choice in $choicesMedia; do
         case $choice in
             1 | TV )
-                for f in ${TV_EXT}/*/*/ ; do
+                for f in $TV_EXT ; do
                     cd "$f" || continue;
                     echo "${PWD}";
                     SHOW_OUTPUT;
@@ -157,7 +162,7 @@ function finalDelete() {
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             2 | Movies )
-                for f in ${MOVIES_EXT}/*/*/ ; do
+                for f in $MOVIES_EXT ; do
                     cd "$f" || continue;
                     echo "${PWD}";
                     SHOW_OUTPUT;
@@ -165,7 +170,7 @@ function finalDelete() {
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             3 | Porn )
-                for f in ${PORN_EXT}/*/*/ ; do
+                for f in $PORN_EXT ; do
                     cd "$f" || continue;
                     echo "${PWD}";
                     SHOW_OUTPUT;
@@ -195,21 +200,21 @@ for choice in $choicesAction; do
             for choice2 in $choicesMedia; do
                 case $choice2 in
                     1 | TV )
-                        for f in ${TV_EXT}/*/*/ ; do
+                        for f in $TV_EXT ; do
                             cd "$f" || continue;
                             echo "${PWD}";
                             variableOutput
                             cd "$OLDPWD" || ! break;
                         done || ! cd - >&2;;
                     2 | Movies )
-                        for f in ${MOVIES_EXT}/* ; do
+                        for f in $MOVIES_EXT ; do
                             cd "$f" || continue;
                             echo "${PWD}";
                             variableOutput;
                             cd "$OLDPWD" || ! break;
                         done || ! cd - >&2;;
                     Porn )
-                        for f in ${PORN_EXT}/*/*/ ; do
+                        for f in $PORN_EXT ; do
                             cd "$f" || continue;
                             echo "${PWD}";
                             variableOutput;

@@ -29,7 +29,7 @@ fi
 
 tmp_file="$(mktemp)"
 TV_EXT="${extDrive}/TV/*/*/"
-MOVIES_EXT="${extDrive}/Movies/*"
+MOVIES_EXT="${extDrive}/Movies"
 PORN_EXT="${extDrive}/Porn/*/*/*"
 
 function USAGE() {

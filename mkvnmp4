@@ -4,7 +4,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
 PROGRAM_LOCATION="${DIR}/${PROGRAM_NAME}"
-VERSION="1.0.2"
+VERSION="2.0.0b1"
 
 if [[ ! -e "$(command -v allunix)" ]]; then
     echo "AllUnix file is missing."
@@ -12,6 +12,7 @@ if [[ ! -e "$(command -v allunix)" ]]; then
 fi
 
 . "$(command -v allunix)"
+git_local_bin_install &&
 no_sudo
 
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -64,16 +65,17 @@ function CONFIRM_DEL() {
 
 function SHOW_OUTPUT() {
     while IFS= read -r file; do
-       [[ -e ${file%.mkv}.mp4 ]] &&
-       echo "
-       $file ${RED}<--THIS ONE${NORMAL}
-       ${file%.mkv}.mp4";
-   done < <(find . -type f -iname "*.mkv" -exec echo {} \; ) | sudo tee "$tmp_file"
+        [[ -e ${file%.mkv}.mp4 ]] &&
+        echo "
+        $file ${RED}<--THIS ONE${NORMAL}
+        ${file%.mkv}.mp4";
+    done < <(find . -type f -iname "*.mkv" -exec echo {} \; ) | sudo tee "$tmp_file"
 }
 
 function iSHOW_OUTPUT() {
     SHOW_OUTPUT | tee "$tmp_file"
 }
+
 function kSHOW_OUTPUT() {
     if [[ $(iSHOW_OUTPUT) != "" ]]; then
 cat << EOF
@@ -93,88 +95,98 @@ EOF
 
 trap 'rm $tmp_file; HELP_VERSION; exit 1' SIGHUP SIGINT SIGTERM
 
+# This section is for the `dialog` prompts.
+# It uses the main `cmd` variable, as both prompts are simple and
+# the same size.
 cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
-
+# Then, the different menu options have different variable arrays
 mediaOptions=(
     1 "TV"
     2 "Movies"
     3 "Porn"
 )
-
 actionOptions=(
     1 "Subler"
     2 "Delete_Duplicates"
 )
-
+# Then, calling the actual dialog and assigning a number to the variable
+# happens here.
+# And it assigns the NUMBER of the selection to the variable.
 choicesAction=$("${cmd[@]}" "${actionOptions[@]}" 2>&1 >/dev/tty)
 choicesMedia=$("${cmd[@]}" "${mediaOptions[@]}" 2>&1 >/dev/tty)
 
+# These function blocks were me playing with Apple's Automation stuff.
 function appleScriptFunction() {
-choices=$(osascript -l JavaScript -e'
-    var app = Application.currentApplication()
-    app.includeStandardAdditions = true
-
-    var locationChoices = ["TV", "Movies", "Porn", "Custom"]
-    var locationList = app.chooseFromList(locationChoices, {
-        withPrompt: "Select options:",
-        defaultItems: ["Custom"]
-    })
-    locationList' 2>&1)
-function osascriptCustomSelector() {
-    directories="$(osascript -l JavaScript -e '
+    # This first item, the variable, is like the dialog selector from above,
+    # but it outputs the selections NAME into the variable.
+    choices=$(osascript -l JavaScript -e '
         var app = Application.currentApplication()
         app.includeStandardAdditions = true
 
-        var outputFolder = app.chooseFolder({
-            withPrompt: "Please select an output folder:",
-            multipleSelectionsAllowed: true
+        var locationChoices = ["TV", "Movies", "Porn", "Custom"]
+        var locationList = app.chooseFromList(locationChoices, {
+            withPrompt: "Select options:",
+            defaultItems: ["Custom"]
         })
-        outputFolder' | cut -d '"' -f2)"
-}
+        locationList' 2>&1)
+
+    # This function is a custom directory selector, for narrowing
+    # the operation of the script.
+    function osascriptCustomSelector() {
+        directories="$(osascript -l JavaScript -e '
+            var app = Application.currentApplication()
+            app.includeStandardAdditions = true
+
+            var outputFolder = app.chooseFolder({
+                withPrompt: "Please select a specific Directory to search through:",
+                multipleSelectionsAllowed: true
+            })
+            outputFolder' | cut -d '"' -f2)"
+    }
 }
 
 function finalDelete() {
-for choice in $choicesMedia; do
-    case $choice in
-        1 | TV )
-            for f in ${TV_EXT}/*/*/ ; do
-                cd "$f" || continue;
-                echo "${PWD}";
-                SHOW_OUTPUT;
-                kSHOW_OUTPUT;
-                cd "$OLDPWD" || ! break;
-            done || ! cd - >&2;;
-        2 | Movies )
-            for f in ${MOVIES_EXT}/*/*/ ; do
-                cd "$f" || continue;
-                echo "${PWD}";
-                SHOW_OUTPUT;
-                kSHOW_OUTPUT;
-                cd "$OLDPWD" || ! break;
-            done || ! cd - >&2;;
-        3 | Porn )
-            for f in ${PORN_EXT}/*/*/ ; do
-                cd "$f" || continue;
-                echo "${PWD}";
-                SHOW_OUTPUT;
-                kSHOW_OUTPUT;
-                cd "$OLDPWD" || ! break;
-            done || ! cd - >&2;;
-        4 | Custom )
-            osascriptCustomSelector;
-            myFiles=("$directories"/*)
-            for f in "${myFiles[@]}" ; do
-                cd "$f" || continue;
-                echo "${PWD}";
-                SHOW_OUTPUT;
-                kSHOW_OUTPUT;
-                cd "$OLDPWD" || ! break;
-            done || ! cd - >&2;
-            unset f myFiles directories;;
-        * )
-            USAGE; HELP_VERSION; exit 1;;
-    esac
-done
+    for choice in $choicesMedia; do
+        case $choice in
+            1 | TV )
+                for f in ${TV_EXT}/*/*/ ; do
+                    cd "$f" || continue;
+                    echo "${PWD}";
+                    SHOW_OUTPUT;
+                    kSHOW_OUTPUT;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            2 | Movies )
+                for f in ${MOVIES_EXT}/*/*/ ; do
+                    cd "$f" || continue;
+                    echo "${PWD}";
+                    SHOW_OUTPUT;
+                    kSHOW_OUTPUT;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            3 | Porn )
+                for f in ${PORN_EXT}/*/*/ ; do
+                    cd "$f" || continue;
+                    echo "${PWD}";
+                    SHOW_OUTPUT;
+                    kSHOW_OUTPUT;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            4 | Custom )
+                osascriptCustomSelector;
+                myFiles=("$directories"/*)
+                for f in "${myFiles[@]}" ; do
+                    cd "$f" || continue;
+                    echo "${PWD}";
+                    SHOW_OUTPUT;
+                    kSHOW_OUTPUT;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;
+                unset f myFiles directories;;
+            * )
+                USAGE; HELP_VERSION; exit 1;;
+        esac
+    done
 }
 
 for choice in $choicesAction; do

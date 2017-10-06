@@ -46,6 +46,9 @@ tmp_file="$(mktemp)"
 TV_EXT="${extDrive}/TV/*/*/"
 MOVIES_EXT="${extDrive}/Movies"
 PORN_EXT="${extDrive}/Porn/*/*/*"
+function findCMD() {
+    find -s . -type f -iname "*.mkv" -exec echo {} \;
+}
 
 function USAGE() {
 cat << EOF
@@ -59,7 +62,17 @@ ${RED}Currently, this does not make sure the new, .mp4 version is not currently 
 EOF
 }
 
-function variableOutput() {
+function outputMKVFiles() {
+    if (find -s . -type f -iname "*.mkv" | grep -E ".*" >/dev/null) ; then
+        echo ""
+        while IFS= read -r file; do
+            echo "${file#./}"
+        done < <(findCMD)
+        echo ""
+    fi
+}
+
+function outputToSubler() {
     while IFS= read -r file; do
         if [[ ! -e ${file%.mkv}.mp4 ]]; then
             echo ""
@@ -71,7 +84,7 @@ function variableOutput() {
                     add to queue filePath
                 end tell"
         fi
-    done < <(find . -type f -iname "*.mkv" -exec echo {} \; ) | sudo tee "$tmp_file"
+    done < <(findCMD)
 }
 
 function CONFIRM_DEL() {
@@ -80,7 +93,7 @@ function CONFIRM_DEL() {
         echo "${RED}Erasing ${file}....${NORMAL}"
         echo ""
         rm -f "$file" ;
-    done < <(find . -type f -iname "*.mkv" -exec echo {} \; )
+    done < <(findCMD)
 }
 
 function SHOW_OUTPUT() {
@@ -89,15 +102,11 @@ function SHOW_OUTPUT() {
         echo "
         $file ${RED}<--THIS ONE${NORMAL}
         ${file%.mkv}.mp4";
-    done < <(find . -type f -iname "*.mkv" -exec echo {} \; ) | sudo tee "$tmp_file"
-}
-
-function iSHOW_OUTPUT() {
-    SHOW_OUTPUT | tee "$tmp_file"
+    done < <(findCMD)
 }
 
 function kSHOW_OUTPUT() {
-    if [[ $(iSHOW_OUTPUT) != "" ]]; then
+    if [[ $(SHOW_OUTPUT) != "" ]]; then
 cat << EOF
 
 Please, examine the above files to confirm they are ready to be removed.
@@ -124,10 +133,12 @@ mediaOptions=(
     1 "TV"
     2 "Movies"
     3 "Porn"
+    4. "Custom"
 )
 actionOptions=(
     1 "Subler"
     2 "Delete_Duplicates"
+    3 "Show all MKV Files"
 )
 # Then, calling the actual dialog and assigning a number to the variable
 # happens here.
@@ -146,7 +157,7 @@ function appleScriptFunction() {
         var locationChoices = ["TV", "Movies", "Porn", "Custom"]
         var locationList = app.chooseFromList(locationChoices, {
             withPrompt: "Select options:",
-            defaultItems: ["Custom"]
+            defaultItems: ["TV"]
         })
         locationList' 2>&1)
 
@@ -209,49 +220,90 @@ function finalDelete() {
     done
 }
 
+function sendToSubler() {
+    for choice2 in $choicesMedia; do
+        case $choice2 in
+            1 | TV )
+                for f in $TV_EXT ; do
+                    cd "$f" || continue;
+                    echo "${PWD}";
+                    outputToSubler;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            2 | Movies )
+                for f in $MOVIES_EXT ; do
+                    cd "$f" || continue;
+                    echo "${PWD}";
+                    outputToSubler;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            3 | Porn )
+                for f in $PORN_EXT ; do
+                    cd "$f" || continue;
+                    echo "${PWD}";
+                    outputToSubler;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            4 | Custom )
+                osascriptCustomSelector;
+                myFiles=("$directories"/*)
+                for f in "${myFiles[@]}" ; do
+                    cd "$f" || continue;
+                    echo "${PWD}";
+                    outputToSubler;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;
+                unset f myFiles directories;;
+            * )
+                USAGE; HELP_VERSION; exit 1;;
+        esac
+    done
+}
+
+function showMKVFiles() {
+    for choice3 in $choicesMedia; do
+        case $choice3 in
+            1 | TV )
+                for f in $TV_EXT ; do
+                    cd "$f" || continue;
+                    outputMKVFiles;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            2 | Movies )
+                for f in $MOVIES_EXT ; do
+                    cd "$f" || continue;
+                    outputMKVFiles;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            3 | Porn )
+                for f in $PORN_EXT ; do
+                    cd "$f" || continue;
+                    outputMKVFiles;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            4 | Custom )
+                osascriptCustomSelector;
+                myFiles=("$directories"/*)
+                for f in "${myFiles[@]}" ; do
+                    cd "$f" || continue;
+                    outputMKVFiles;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;
+                unset f myFiles directories;;
+            * )
+                USAGE; HELP_VERSION; exit 1;;
+        esac
+    done
+}
+
 for choice in $choicesAction; do
     case $choice in
-        1 | Subler )
-            for choice2 in $choicesMedia; do
-                case $choice2 in
-                    1 | TV )
-                        for f in $TV_EXT ; do
-                            cd "$f" || continue;
-                            echo "${PWD}";
-                            variableOutput
-                            cd "$OLDPWD" || ! break;
-                        done || ! cd - >&2;;
-                    2 | Movies )
-                        for f in $MOVIES_EXT ; do
-                            cd "$f" || continue;
-                            echo "${PWD}";
-                            variableOutput;
-                            cd "$OLDPWD" || ! break;
-                        done || ! cd - >&2;;
-                    Porn )
-                        for f in $PORN_EXT ; do
-                            cd "$f" || continue;
-                            echo "${PWD}";
-                            variableOutput;
-                            cd "$OLDPWD" || ! break;
-                        done || ! cd - >&2;;
-                    Custom )
-                        osascriptCustomSelector;
-                        myFiles=("$directories"/*)
-                        for f in "${myFiles[@]}" ; do
-                            cd "$f" || continue;
-                            echo "${PWD}";
-                            variableOutput;
-                            cd "$OLDPWD" || ! break;
-                        done || ! cd - >&2;
-                        unset f myFiles directories;;
-                    * )
-                        USAGE; HELP_VERSION; exit 1;;
-                esac
-            done
-            ;;
-        2 | Delete_Duplicates )
+        1 )
+            sendToSubler;;
+        2 )
             finalDelete;;
+        3 )
+            showMKVFiles;;
     esac
 done
 

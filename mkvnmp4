@@ -16,22 +16,8 @@ if [[ "$(uname)" == "Darwin" ]]; then
         extDrive="/Volumes/8TB_EXT"
     else
         echo "The default external drive is not found."
-        cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
-        extQuestion=(
-            1. "Enter DIrectory Manually"
-            2. "Exit to Mount External Drive"
-        )
-        missingAnswer=$("${cmd[@]}" "${actionOptions[@]}" 2>&1 >/dev/tty)
-        for choice in $missingAnswer; do
-            case $choice in
-                1 )
-                    echo "Please, enter the base Directory: ";
-                    read -r -p extDrive;;
-                2 )
-                    echo "Now exiting the entire script so you can mount the external you want to use.";
-                    exit 0;;
-            esac
-        done
+        echo "You need to get the drive mounted."
+        exit 1
     fi
 else
     echo "Currently, only meant for macOS."

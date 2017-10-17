@@ -1,19 +1,15 @@
 #!/bin/bash -e
 
+# This script is for looking through my media files for any MKV
+# files and:
+## - Send them to Subler using Apple's Applescript Automation Language
+## - Simply List them
+## - Delete them (I don't suggest using this, as its had a habit of erasing all
+###  of the directory....)
+
 # Program information
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
-PROGRAM_LOCATION="${DIR}/${PROGRAM_NAME}"
-VERSION="2.0.0b2"
-
-if [[ ! -e "$(command -v allunix)" ]]; then
-    echo "AllUnix file is missing."
-    wget -O - http://bit.ly/jp_allunix | bash
-fi
-
-. "$(command -v allunix)"
-git_local_bin_install &&
-no_sudo
 
 if [[ "$(uname)" == "Darwin" ]]; then
     if [ -d /Volumes/8TB_EXT ]; then
@@ -45,9 +41,15 @@ fi
 tmp_file="$(mktemp)"
 TV_EXT="${extDrive}/TV/*/*/"
 MOVIES_EXT="${extDrive}/Movies"
-PORN_EXT="${extDrive}/Porn/*/*/*"
-function findCMD() {
-    find -s . -type f -iname "*.mkv" -exec echo {} \;
+PORN_EXT="${extDrive}/Porn/*/*/"
+
+RED=$(tput setaf 1)
+NORMAL=$(tput sgr 0)
+
+function press_enter() {
+    echo ""
+    echo -n "Press Enter to Continue..."
+    read -r
 }
 
 function USAGE() {
@@ -60,6 +62,10 @@ ${RED}Currently, this does not make sure the new, .mp4 version is not currently 
 
             MAKE SURE TO DOUBLE CHECK FIRST!${NORMAL}
 EOF
+}
+
+function findCMD() {
+    find -s . -type f -iname "*.mkv" -exec echo {} \;
 }
 
 function outputMKVFiles() {
@@ -122,7 +128,7 @@ EOF
     fi
 }
 
-trap 'rm $tmp_file; HELP_VERSION; exit 1' SIGHUP SIGINT SIGTERM
+trap 'rm $tmp_file; exit 1' SIGHUP SIGINT SIGTERM
 
 # This section is for the `dialog` prompts.
 # It uses the main `cmd` variable, as both prompts are simple and
@@ -308,5 +314,4 @@ for choice in $choicesAction; do
 done
 
 echo ""
-HELP_VERSION &&
 exit 0

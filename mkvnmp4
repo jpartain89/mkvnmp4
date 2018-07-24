@@ -51,7 +51,7 @@ EOF
 }
 
 findCMD() {
-    find -s . -type f -iname "*.mkv" -exec echo {} \;
+    find -s "${PWD}" -type f -iname "*.mkv" -exec echo {} \;
 }
 
 outputMKVFiles() {

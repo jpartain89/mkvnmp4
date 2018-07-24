@@ -32,13 +32,13 @@ PORN_EXT="${extDrive}/Porn/*/*/"
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr 0)
 
-function press_enter() {
+press_enter() {
     echo ""
     echo -n "Press Enter to Continue..."
     read -r
 }
 
-function USAGE() {
+USAGE() {
 cat << EOF
 ${PROGRAM_NAME}
 
@@ -50,11 +50,11 @@ ${RED}Currently, this does not make sure the new, .mp4 version is not currently 
 EOF
 }
 
-function findCMD() {
+findCMD() {
     find -s . -type f -iname "*.mkv" -exec echo {} \;
 }
 
-function outputMKVFiles() {
+outputMKVFiles() {
     if (find -s . -type f -iname "*.mkv" | grep -E ".*" >/dev/null) ; then
         echo ""
         while IFS= read -r file; do
@@ -64,7 +64,7 @@ function outputMKVFiles() {
     fi
 }
 
-function outputToSubler() {
+outputToSubler() {
     while IFS= read -r file; do
         if [[ ! -e ${file%.mkv}.mp4 ]]; then
             echo ""
@@ -79,7 +79,7 @@ function outputToSubler() {
     done < <(findCMD)
 }
 
-function CONFIRM_DEL() {
+CONFIRM_DEL() {
     while IFS= read -r file; do
         [[ -e ${file%.mkv}.mp4 ]] &&
         echo "${RED}Erasing ${file}....${NORMAL}"
@@ -88,7 +88,7 @@ function CONFIRM_DEL() {
     done < <(findCMD)
 }
 
-function SHOW_OUTPUT() {
+SHOW_OUTPUT() {
     while IFS= read -r file; do
         [[ -e ${file%.mkv}.mp4 ]] &&
         echo "
@@ -97,7 +97,7 @@ function SHOW_OUTPUT() {
     done < <(findCMD)
 }
 
-function kSHOW_OUTPUT() {
+kSHOW_OUTPUT() {
     if [[ $(SHOW_OUTPUT) != "" ]]; then
 cat << EOF
 
@@ -138,8 +138,8 @@ actionOptions=(
 choicesAction=$("${cmd[@]}" "${actionOptions[@]}" 2>&1 >/dev/tty)
 choicesMedia=$("${cmd[@]}" "${mediaOptions[@]}" 2>&1 >/dev/tty)
 
-# These function blocks were me playing with Apple's Automation stuff.
-function appleScriptFunction() {
+# These blocks were me playing with Apple's Automation stuff.
+appleScriptFunction() {
     # This first item, the variable, is like the dialog selector from above,
     # but it outputs the selections NAME into the variable.
     choices=$(osascript -l JavaScript -e '
@@ -153,9 +153,9 @@ function appleScriptFunction() {
         })
         locationList' 2>&1)
 
-    # This function is a custom directory selector, for narrowing
+    # This is a custom directory selector, for narrowing
     # the operation of the script.
-    function osascriptCustomSelector() {
+    osascriptCustomSelector() {
         directories="$(osascript -l JavaScript -e '
             var app = Application.currentApplication()
             app.includeStandardAdditions = true
@@ -168,7 +168,7 @@ function appleScriptFunction() {
     }
 }
 
-function finalDelete() {
+finalDelete() {
     for choice in $choicesMedia; do
         case $choice in
             1 | TV )
@@ -212,7 +212,7 @@ function finalDelete() {
     done
 }
 
-function sendToSubler() {
+sendToSubler() {
     for choice2 in $choicesMedia; do
         case $choice2 in
             1 | TV )
@@ -252,7 +252,7 @@ function sendToSubler() {
     done
 }
 
-function showMKVFiles() {
+showMKVFiles() {
     for choice3 in $choicesMedia; do
         case $choice3 in
             1 | TV )

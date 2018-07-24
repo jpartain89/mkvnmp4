@@ -70,8 +70,7 @@ outputToSubler() {
             echo ""
             echo "$file ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
-                set filePath to POSIX file \"$file\"
-                set filePath to filePath as alias
+                set filePath to (POSIX file \"$file\" as alias)
                 tell application \"Subler\"
                     add to queue filePath
                 end tell"

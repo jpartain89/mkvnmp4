@@ -90,9 +90,12 @@ CONFIRM_DEL() {
 SHOW_OUTPUT() {
     while IFS= read -r file; do
         [[ -e ${file%.mkv}.mp4 ]] &&
-        echo "
-        $file ${RED}<--THIS ONE${NORMAL}
-        ${file%.mkv}.mp4";
+        cat << EOF
+      ############################################################
+                    $file ${RED}<--THIS ONE${NORMAL}
+                          ${file%.mkv}.mp4"
+      ############################################################
+        EOF;
     done < <(findCMD)
 }
 

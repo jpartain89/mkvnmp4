@@ -92,8 +92,8 @@ SHOW_OUTPUT() {
         [[ -e ${file%.mkv}.mp4 ]] &&
         echo "
       ############################################################
-                    $file ${RED}<--THIS ONE${NORMAL}
-                          ${file%.mkv}.mp4"
+$file ${RED}<--THIS ONE${NORMAL}
+${file%.mkv}.mp4"
       ############################################################"
     done < <(findCMD)
 }

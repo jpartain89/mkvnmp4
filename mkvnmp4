@@ -124,7 +124,7 @@ mediaOptions=(
     1 "TV"
     2 "Movies"
     3 "Porn"
-    4. "Custom"
+    4 "Custom"
 )
 actionOptions=(
     1 "Subler"
@@ -257,19 +257,19 @@ showMKVFiles() {
             1 | TV )
                 for f in $TV_EXT ; do
                     cd "$f" || continue;
-                    outputMKVFiles;
+                    SHOW_OUTPUT;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             2 | Movies )
                 for f in $MOVIES_EXT ; do
                     cd "$f" || continue;
-                    outputMKVFiles;
+                    SHOW_OUTPUT;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             3 | Porn )
                 for f in $PORN_EXT ; do
                     cd "$f" || continue;
-                    outputMKVFiles;
+                    SHOW_OUTPUT;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             4 | Custom )
@@ -277,7 +277,7 @@ showMKVFiles() {
                 myFiles=("$directories"/*)
                 for f in "${myFiles[@]}" ; do
                     cd "$f" || continue;
-                    outputMKVFiles;
+                    SHOW_OUTPUT;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;
                 unset f myFiles directories;;

@@ -11,12 +11,22 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
 
+if [ -f /etc/mkvnmp4.conf ]; then
+    . /etc/mkvnmp4.conf
+elif [ -f ~/.mkvnmp4.conf ]; then
+    . ~/.mkvnmp4.conf
+elif [ -f ~/.config/mkvnmp4.conf ]; then
+    . ~/.config/mkvnmp4.conf
+else
+    echo "You need to setup and use mkvnmp4.conf."
+fi
+
 if [[ "$(uname)" == "Darwin" ]]; then
-    if [ -d /Volumes/8TB_EXT ]; then
-        extDrive="/Volumes/8TB_EXT"
+    if [ -d "${pornDRIVE}" ] || [ -d "${movieDRIVE}" ]  || [ -d "${tvDRIVE}" ] || [ -d "${extDRIVE}" ]; then
+        echo "Tested for directory existence. Continuing."
     else
-        echo "The default external drive is not found."
-        echo "You need to get the drive mounted."
+        echo "Your configured drives are not present."
+        echo "You need to get the drives mounted before we can continue."
         exit 1
     fi
 else
@@ -25,9 +35,9 @@ else
 fi
 
 tmp_file="$(mktemp)"
-TV_EXT="${extDrive}/TV/*/*/"
-MOVIES_EXT="${extDrive}/Movies"
-PORN_EXT="${extDrive}/Porn/*/*/"
+TV_EXT="${tvDRIVE:-extDrive}/*/*/"
+MOVIES_EXT="${movieDRIVE:-extDrive}/"
+PORN_EXT="${pornDRIVE:-extDrive}/*/*/"
 
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr 0)

@@ -18,7 +18,21 @@ elif [ -f ~/.mkvnmp4.conf ]; then
 elif [ -f ~/.config/mkvnmp4.conf ]; then
     . ~/.config/mkvnmp4.conf
 else
-    echo "You need to setup and use mkvnmp4.conf."
+    cat << EOF
+We couldn't find the mkvnmp4.conf configuration file tha twe require to run!
+The file is looked for at:
+
+    /etc/mkvnmp4.conf
+    ~/.mkvnmp4.conf
+            - or -
+    ~/.config/mkvnmp4.conf
+
+This repo has a configuration file example that you can key off of for what you need to fill out.
+
+Exiting now.
+EOF
+    exit 1
+
 fi
 
 if [[ "$(uname)" == "Darwin" ]]; then

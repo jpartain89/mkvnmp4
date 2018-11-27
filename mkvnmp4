@@ -88,11 +88,11 @@ EOF
 }
 
 findCMD() {
-    find -s "${PWD}" -type f -iname "*.mkv" -exec echo {} \;
+    find -s "${PWD}" -type f \( -iname "*.mkv" -o -iname "*.m4v" \)  -exec echo {} \;
 }
 
 outputMKVFiles() {
-    if (find -s . -type f -iname "*.mkv" | grep -E ".*" >/dev/null) ; then
+    if (find -s . -type f \( -iname "*.mkv" -o -iname "*.m4v" \) | grep -E ".*" >/dev/null) ; then
         echo ""
         while IFS= read -r file; do
             echo "${file#./}"
@@ -111,13 +111,21 @@ outputToSubler() {
                 tell application \"Subler\"
                     add to queue filePath
                 end tell"
+        elif [[ ! -e ${file%.m4v}.mp4 ]]; then
+            echo ""
+            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            osascript -e "
+                set filePath to (POSIX file \"$file\" as alias)
+                tell application \"Subler\"
+                    add to queue filePath
+                end tell"
         fi
     done < <(findCMD)
 }
 
 CONFIRM_DEL() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] &&
+        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]] &&
         echo "${RED}Erasing ${file}....${NORMAL}"
         echo ""
         rm -f "$file" ;
@@ -126,7 +134,7 @@ CONFIRM_DEL() {
 
 SHOW_OUTPUT() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] &&
+        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]]&&
         echo "
       ############################################################
 ${RED}$file ${NORMAL}

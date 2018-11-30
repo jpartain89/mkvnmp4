@@ -87,6 +87,7 @@ ${RED}Currently, this does not make sure the new, .mp4 version is not currently 
 EOF
 }
 
+# This is the entire find command line, with `mkv` and `m4v` included
 findCMD() {
     find -s "${PWD}" -type f \( -iname "*.mkv" -o -iname "*.m4v" \)  -exec echo {} \;
 }

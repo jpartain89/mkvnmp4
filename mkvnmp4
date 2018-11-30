@@ -11,12 +11,49 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
 
+command -v "$PROGRAM_NAME" 1>/dev/null 2>&1 || {
+    (
+        if [ -x "${DIR}/${PROGRAM_NAME}" ]; then
+            sudo ln -svf "${DIR}/${PROGRAM_NAME}" "/usr/local/bin/${PROGRAM_NAME}"
+            sudo chmod -R 0775 "/usr/local/bin/${PROGRAM_NAME}"
+        else
+            echo "For some reason, linking $PROGRAM_NAME to /usr/local/bin,"
+            echo "failed. My apologies for not being able to figure it out..."
+            exit 1
+        fi
+    )
+}
+
+if [ -f /etc/mkvnmp4.conf ]; then
+    . /etc/mkvnmp4.conf
+elif [ -f ~/.mkvnmp4.conf ]; then
+    . ~/.mkvnmp4.conf
+elif [ -f ~/.config/mkvnmp4.conf ]; then
+    . ~/.config/mkvnmp4.conf
+else
+    cat << EOF
+We couldn't find the mkvnmp4.conf configuration file tha twe require to run!
+The file is looked for at:
+
+    /etc/mkvnmp4.conf
+    ~/.mkvnmp4.conf
+            - or -
+    ~/.config/mkvnmp4.conf
+
+This repo has a configuration file example that you can key off of for what you need to fill out.
+
+Exiting now.
+EOF
+    exit 1
+
+fi
+
 if [[ "$(uname)" == "Darwin" ]]; then
-    if [ -d /Volumes/8TB_EXT ]; then
-        extDrive="/Volumes/8TB_EXT"
+    if [ -d "${pornDRIVE}" ] || [ -d "${movieDRIVE}" ]  || [ -d "${tvDRIVE}" ] || [ -d "${extDRIVE}" ]; then
+        echo "Tested for directory existence. Continuing."
     else
-        echo "The default external drive is not found."
-        echo "You need to get the drive mounted."
+        echo "Your configured drives are not present."
+        echo "You need to get the drives mounted before we can continue."
         exit 1
     fi
 else
@@ -25,9 +62,9 @@ else
 fi
 
 tmp_file="$(mktemp)"
-TV_EXT="${extDrive}/TV/*/*/"
-MOVIES_EXT="${extDrive}/Movies"
-PORN_EXT="${extDrive}/Porn/*/*/"
+TV_EXT="${tvDRIVE:-extDrive}/*/*/"
+MOVIES_EXT="${movieDRIVE:-extDrive}/"
+PORN_EXT="${pornDRIVE:-extDrive}/*/*/"
 
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr 0)
@@ -50,12 +87,13 @@ ${RED}Currently, this does not make sure the new, .mp4 version is not currently 
 EOF
 }
 
+# This is the entire find command line, with `mkv` and `m4v` included
 findCMD() {
-    find -s . -type f -iname "*.mkv" -exec echo {} \;
+    find -s "${PWD}" -type f \( -iname "*.mkv" -o -iname "*.m4v" \)  -exec echo {} \;
 }
 
 outputMKVFiles() {
-    if (find -s . -type f -iname "*.mkv" | grep -E ".*" >/dev/null) ; then
+    if (find -s . -type f \( -iname "*.mkv" -o -iname "*.m4v" \) | grep -E ".*" >/dev/null) ; then
         echo ""
         while IFS= read -r file; do
             echo "${file#./}"
@@ -70,8 +108,15 @@ outputToSubler() {
             echo ""
             echo "$file ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
-                set filePath to POSIX file \"$file\"
-                set filePath to filePath as alias
+                set filePath to (POSIX file \"$file\" as alias)
+                tell application \"Subler\"
+                    add to queue filePath
+                end tell"
+        elif [[ ! -e ${file%.m4v}.mp4 ]]; then
+            echo ""
+            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            osascript -e "
+                set filePath to (POSIX file \"$file\" as alias)
                 tell application \"Subler\"
                     add to queue filePath
                 end tell"
@@ -81,7 +126,7 @@ outputToSubler() {
 
 CONFIRM_DEL() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] &&
+        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]] &&
         echo "${RED}Erasing ${file}....${NORMAL}"
         echo ""
         rm -f "$file" ;
@@ -90,10 +135,12 @@ CONFIRM_DEL() {
 
 SHOW_OUTPUT() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] &&
+        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]]&&
         echo "
-        $file ${RED}<--THIS ONE${NORMAL}
-        ${file%.mkv}.mp4";
+      ############################################################
+${RED}$file ${NORMAL}
+${file%.mkv}.mp4
+      ############################################################"
     done < <(findCMD)
 }
 
@@ -125,7 +172,7 @@ mediaOptions=(
     1 "TV"
     2 "Movies"
     3 "Porn"
-    4. "Custom"
+    4 "Custom"
 )
 actionOptions=(
     1 "Subler"
@@ -258,19 +305,19 @@ showMKVFiles() {
             1 | TV )
                 for f in $TV_EXT ; do
                     cd "$f" || continue;
-                    outputMKVFiles;
+                    SHOW_OUTPUT;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             2 | Movies )
                 for f in $MOVIES_EXT ; do
                     cd "$f" || continue;
-                    outputMKVFiles;
+                    SHOW_OUTPUT;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             3 | Porn )
                 for f in $PORN_EXT ; do
                     cd "$f" || continue;
-                    outputMKVFiles;
+                    SHOW_OUTPUT;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             4 | Custom )
@@ -278,7 +325,7 @@ showMKVFiles() {
                 myFiles=("$directories"/*)
                 for f in "${myFiles[@]}" ; do
                     cd "$f" || continue;
-                    outputMKVFiles;
+                    SHOW_OUTPUT;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;
                 unset f myFiles directories;;

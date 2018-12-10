@@ -32,7 +32,7 @@ elif [ -f ~/.config/mkvnmp4.conf ]; then
     . ~/.config/mkvnmp4.conf
 else
     cat << EOF
-We couldn't find the mkvnmp4.conf configuration file tha twe require to run!
+We couldn't find the mkvnmp4.conf configuration file that we require to run!
 The file is looked for at:
 
     /etc/mkvnmp4.conf

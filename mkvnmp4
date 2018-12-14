@@ -220,11 +220,11 @@ finalDelete() {
         case $choice in
             1 | TV )
                 for f in $TV_EXT ; do
-                    cd "$f" || continue;
+                    #cd "$f" || continue;
                     echo "${PWD}";
                     SHOW_OUTPUT;
                     kSHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
+                    #cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             2 | Movies )
                 for f in $MOVIES_EXT ; do
@@ -232,25 +232,25 @@ finalDelete() {
                     echo "${PWD}";
                     SHOW_OUTPUT;
                     kSHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
+                    #cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             3 | Porn )
                 for f in $PORN_EXT ; do
-                    cd "$f" || continue;
+                    #cd "$f" || continue;
                     echo "${PWD}";
                     SHOW_OUTPUT;
                     kSHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
+                    #cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
             4 | Custom )
                 osascriptCustomSelector;
                 myFiles=("$directories"/*)
                 for f in "${myFiles[@]}" ; do
-                    cd "$f" || continue;
+                    #cd "$f" || continue;
                     echo "${PWD}";
                     SHOW_OUTPUT;
                     kSHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
+                    #cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;
                 unset f myFiles directories;;
             * )
@@ -271,7 +271,7 @@ sendToSubler() {
                 done || ! cd - >&2;;
             2 | Movies )
                 for f in $MOVIES_EXT ; do
-                    #cd "$f" || continue;
+                    cd "$f" || continue;
                     echo "${PWD}";
                     outputToSubler;
                     #cd "$OLDPWD" || ! break;

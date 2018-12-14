@@ -63,7 +63,7 @@ fi
 
 tmp_file="$(mktemp)"
 TV_EXT="${tvDRIVE:-extDrive}/*/*/"
-MOVIES_EXT="${movieDRIVE:-extDrive}/"
+MOVIES_EXT="${movieDRIVE:-extDrive}/*/"
 PORN_EXT="${pornDRIVE:-extDrive}/*/*/"
 
 RED=$(tput setaf 1)

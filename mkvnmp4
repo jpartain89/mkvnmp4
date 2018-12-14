@@ -228,7 +228,7 @@ finalDelete() {
                 done || ! cd - >&2;;
             2 | Movies )
                 for f in $MOVIES_EXT ; do
-                    cd "$f" || continue;
+                    #cd "$f" || continue;
                     echo "${PWD}";
                     SHOW_OUTPUT;
                     kSHOW_OUTPUT;

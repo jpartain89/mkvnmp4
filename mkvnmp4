@@ -292,7 +292,6 @@ sendToSubler() {
                     echo "${PWD}";
                     outputToSubler;
                     cd "$OLDPWD" || ! break;
-                    echo ""
                 done || ! cd - >&2;;
             2 | TV )
                 for f in $TV_EXT ; do

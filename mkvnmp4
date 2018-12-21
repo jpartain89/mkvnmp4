@@ -61,12 +61,11 @@ This repo has a configuration file example that you can key off of for what you 
 Exiting now.
 EOF
     exit 1
-
 fi
 
 if [[ "$(uname)" == "Darwin" ]]; then
     if [ -d "${pornDRIVE}" ] || [ -d "${movieDRIVE}" ]  || [ -d "${tvDRIVE}" ] || [ -d "${extDRIVE}" ]; then
-        echo "Tested for directory existence. Continuing."
+        echo "Tested the directories listed in your config for their existence. Continuing."
     else
         echo "Your configured drives are not present."
         echo "You need to get the drives mounted before we can continue."
@@ -293,6 +292,7 @@ sendToSubler() {
                     echo "${PWD}";
                     outputToSubler;
                     cd "$OLDPWD" || ! break;
+                    echo ""
                 done || ! cd - >&2;;
             2 | TV )
                 for f in $TV_EXT ; do

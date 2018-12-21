@@ -1,5 +1,20 @@
 #!/bin/bash -e
 
+# Copyright © 2018 JPCDI, JPartain89 and Justin Partain
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 # This script is for looking through my media files for any MKV
 # files and:
 ## - Send them to Subler using Apple's Applescript Automation Language
@@ -10,6 +25,7 @@
 # Program information
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
+VERSION="3.0.0"
 
 command -v "$PROGRAM_NAME" 1>/dev/null 2>&1 || {
     (
@@ -162,6 +178,9 @@ EOF
 }
 
 trap 'rm $tmp_file; exit 1' SIGHUP SIGINT SIGTERM
+
+if [[ $? == "-h" ]]; then
+    USAGE
 
 # This section is for the `dialog` prompts.
 # It uses the main `cmd` variable, as both prompts are simple and

@@ -181,6 +181,8 @@ trap 'rm $tmp_file; exit 1' SIGHUP SIGINT SIGTERM
 
 if [[ $? == "-h" ]]; then
     USAGE
+    exit 0
+fi
 
 # This section is for the `dialog` prompts.
 # It uses the main `cmd` variable, as both prompts are simple and
@@ -188,10 +190,11 @@ if [[ $? == "-h" ]]; then
 cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
 # Then, the different menu options have different variable arrays
 mediaOptions=(
-    1 "TV"
-    2 "Movies"
-    3 "Porn"
-    4 "Custom"
+    1 "All"
+    2 "TV"
+    3 "Movies"
+    4 "Porn"
+    5 "Custom"
 )
 actionOptions=(
     1 "Subler"
@@ -234,10 +237,13 @@ appleScriptFunction() {
     }
 }
 
+# The `choicesMedia` variable is for the 2nd question posed to the user.
+# This block is given first so that bash has it saved to operating memory
+# when asked to use it.
 finalDelete() {
     for choice in $choicesMedia; do
         case $choice in
-            1 | TV )
+            2 | TV )
                 for f in $TV_EXT ; do
                     #cd "$f" || continue;
                     echo "${PWD}";
@@ -245,7 +251,7 @@ finalDelete() {
                     kSHOW_OUTPUT;
                     #cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
-            2 | Movies )
+            3 | Movies )
                 for f in $MOVIES_EXT ; do
                     #cd "$f" || continue;
                     echo "${PWD}";
@@ -253,7 +259,7 @@ finalDelete() {
                     kSHOW_OUTPUT;
                     #cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
-            3 | Porn )
+            4 | Porn )
                 for f in $PORN_EXT ; do
                     #cd "$f" || continue;
                     echo "${PWD}";
@@ -261,7 +267,7 @@ finalDelete() {
                     kSHOW_OUTPUT;
                     #cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
-            4 | Custom )
+            5 | Custom )
                 osascriptCustomSelector;
                 myFiles=("$directories"/*)
                 for f in "${myFiles[@]}" ; do
@@ -281,28 +287,35 @@ finalDelete() {
 sendToSubler() {
     for choice2 in $choicesMedia; do
         case $choice2 in
-            1 | TV )
+            1 | All )
+                for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+                    cd "$f" || continue;
+                    echo "${PWD}";
+                    outputToSubler;
+                    cd "$OLDPWD" || ! break;
+                done || ! cd - >&2;;
+            2 | TV )
                 for f in $TV_EXT ; do
                     cd "$f" || continue;
                     echo "${PWD}";
                     outputToSubler;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
-            2 | Movies )
+            3 | Movies )
                 for f in $MOVIES_EXT ; do
                     cd "$f" || continue;
                     echo "${PWD}";
                     outputToSubler;
                     #cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
-            3 | Porn )
+            4 | Porn )
                 for f in $PORN_EXT ; do
                     cd "$f" || continue;
                     echo "${PWD}";
                     outputToSubler;
                     cd "$OLDPWD" || ! break;
                 done || ! cd - >&2;;
-            4 | Custom )
+            5 | Custom )
                 osascriptCustomSelector;
                 myFiles=("$directories"/*)
                 for f in "${myFiles[@]}" ; do

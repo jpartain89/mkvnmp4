@@ -1,4 +1,5 @@
-#!/usr/local/bin/bash -e
+#!/usr/bin/env bash
+set -e
 shopt -s globstar
 
 # Copyright © 2018-2019 JPCDI, JPartain89 and Justin Partain
@@ -78,7 +79,6 @@ else
     exit 1
 fi
 
-tmp_file="$(mktemp)"
 TV_EXT="${TVDrive:-OtherDrive}/*/*"
 MOVIES_EXT="${MovieDrive:-OtherDrive}/*/*"
 PORN_EXT="${PornDrive:-OtherDrive}/*/*/*"
@@ -227,7 +227,7 @@ EOF
     fi
 }
 
-trap 'rm $tmp_file; exit 1' SIGHUP SIGINT SIGTERM
+trap 'exit 1' SIGHUP SIGINT SIGTERM
 
 if [[ $? == "-h" ]]; then
     USAGE
@@ -238,7 +238,13 @@ fi
 # It uses the main `cmd` variable, as both prompts are simple and
 # the same size.
 cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
-# Still show the actions
+# Then, the different menu options have different variable arrays
+mediaOptions=(
+    1 "All"
+    2 "TV"
+    3 "Movies"
+    4 "Porn"
+)
 actionOptions=(
     1 "Subler"
     2 "Delete_Duplicates"
@@ -248,26 +254,106 @@ actionOptions=(
 # happens here.
 # And it assigns the NUMBER of the selection to the variable.
 choicesAction=$("${cmd[@]}" "${actionOptions[@]}" 2>&1 >/dev/tty)
+choicesMedia=$("${cmd[@]}" "${mediaOptions[@]}" 2>&1 >/dev/tty)
 
 finalDelete() {
-    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
-        echo "${f}";
-        SHOW_OUTPUT;
-        kSHOW_OUTPUT;
-    done
+    for choice in $choicesMedia; do
+        case $choice in
+            1 | All )
+                for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+                    echo "${f}";
+                    SHOW_OUTPUT;
+                    kSHOW_OUTPUT;
+                done
+                ;;
+            2 | TV )
+                for f in $TV_EXT; do
+                    echo "${f}";
+                    SHOW_OUTPUT;
+                    kSHOW_OUTPUT;
+                done
+                ;;
+            3 | Movies )
+                for f in $MOVIES_EXT; do
+                    echo "${f}";
+                    SHOW_OUTPUT;
+                    kSHOW_OUTPUT;
+                done
+                ;;
+            4 | Porn )
+                for f in $PORN_EXT; do
+                    echo "${f}";
+                    SHOW_OUTPUT;
+                    kSHOW_OUTPUT;
+                done
+                ;;
+            esac
+        done
+        unset choice
 }
 
 sendToSubler() {
-    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
-        echo "${f}";
-        outputToSubler;
-    done
+    for choice in $choicesMedia; do
+        case $choice in
+            1 | All )
+                for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+                    echo "${f}";
+                    outputToSubler;
+                done
+                ;;
+            2 | TV )
+                for f in $TV_EXT; do
+                    echo "${f}";
+                    outputToSubler;
+                done
+                ;;
+            3 | Movies )
+                for f in $MOVIES_EXT; do
+                    echo "${f}";
+                    outputToSubler;
+                done
+                ;;
+            4 | Porn )
+                for f in $PORN_EXT; do
+                    echo "${f}";
+                    outputToSubler;
+                done
+                ;;
+            esac
+        done
+        unset choice
 }
 
 showMKVFiles() {
-    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
-        SHOW_OUTPUT;
-    done
+    for choice in $choicesMedia; do
+        case $choice in
+            1 | All )
+                for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+                    echo "${f}";
+                    SHOW_OUTPUT;
+                done
+                ;;
+            2 | TV )
+                for f in $TV_EXT; do
+                    echo "${f}";
+                    SHOW_OUTPUT;
+                done
+                ;;
+            3 | Movies )
+                for f in $MOVIES_EXT; do
+                    echo "${f}";
+                    SHOW_OUTPUT;
+                done
+                ;;
+            4 | Porn )
+                for f in $PORN_EXT; do
+                    echo "${f}";
+                    SHOW_OUTPUT;
+                done
+                ;;
+            esac
+        done
+        unset choice
 }
 
 for choice in $choicesAction; do
@@ -282,4 +368,5 @@ for choice in $choicesAction; do
 done
 
 echo ""
+unset choice
 exit 0

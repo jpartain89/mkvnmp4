@@ -123,11 +123,17 @@ outputMKVFiles() {
             if [[ ! -e ${y} ]]; then
                 echo ""
                 echo "$file"
+            else
+                echo ""
+                echo "$file"
             fi
         done < <(findCMDmkv)
         while IFS= read -r file; do
             y="${file%.m4v}.mp4"
             if [[ ! -e ${y} ]]; then
+                echo ""
+                echo "$file"
+            else
                 echo ""
                 echo "$file"
             fi

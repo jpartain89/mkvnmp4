@@ -79,7 +79,7 @@ else
 fi
 
 tmp_file="$(mktemp)"
-TV_EXT="${TVDrive:-OtherDrive}/*/*/*"
+TV_EXT="${TVDrive:-OtherDrive}/*/*/"
 MOVIES_EXT="${MovieDrive:-OtherDrive}/*/*"
 PORN_EXT="${PornDrive:-OtherDrive}/*/*/*"
 

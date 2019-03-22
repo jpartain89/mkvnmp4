@@ -168,7 +168,7 @@ outputToSubler() {
 CONFIRM_DEL() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ -e ${y} ]]; then
+        if [[ ! -e ${y} ]]; then
             echo "${RED}Erasing ${file}....${NORMAL}"
             echo ""
             rm -f "$file" ;
@@ -190,7 +190,7 @@ CONFIRM_DEL() {
 SHOW_OUTPUT() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ -e ${y} ]]; then
+        if [[ ! -e ${y} ]]; then
 
             cat <<EOF
 ###########################################################

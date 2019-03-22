@@ -1,4 +1,5 @@
 #!/bin/bash -e
+shopt -s globstar
 
 # Copyright © 2018 JPCDI, JPartain89 and Justin Partain
 #
@@ -52,6 +53,7 @@ We couldn't find the mkvnmp4.conf configuration file that we require to run!
 The file is looked for at:
 
     /etc/mkvnmp4.conf
+            - or -
     ~/.mkvnmp4.conf
             - or -
     ~/.config/mkvnmp4.conf
@@ -64,8 +66,8 @@ EOF
 fi
 
 if [[ "$(uname)" == "Darwin" ]]; then
-    if [ -d "${pornDRIVE}" ] || [ -d "${movieDRIVE}" ]  || [ -d "${tvDRIVE}" ] || [ -d "${extDRIVE}" ]; then
-        echo "Tested the directories listed in your config for their existence. Continuing."
+    if [ -d "${PornDrive}" ] || [ -d "${MovieDrive}" ]  || [ -d "${TVDrive}" ] || [ -d "${OtherDrive}" ]; then
+        true
     else
         echo "Your configured drives are not present."
         echo "You need to get the drives mounted before we can continue."
@@ -77,9 +79,9 @@ else
 fi
 
 tmp_file="$(mktemp)"
-TV_EXT="${tvDRIVE:-extDrive}/*/*/"
-MOVIES_EXT="${movieDRIVE:-extDrive}/"
-PORN_EXT="${pornDRIVE:-extDrive}/*/*/"
+TV_EXT="${TVDrive:-OtherDrive}/**/*"
+MOVIES_EXT="${MovieDrive:-OtherDrive}/**/*"
+PORN_EXT="${PornDrive:-OtherDrive}/**/*"
 
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr 0)

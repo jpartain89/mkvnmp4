@@ -79,7 +79,7 @@ else
 fi
 
 tmp_file="$(mktemp)"
-TV_EXT="${TVDrive:-OtherDrive}/*/*/"
+TV_EXT="${TVDrive:-OtherDrive}/*/*"
 MOVIES_EXT="${MovieDrive:-OtherDrive}/*/*"
 PORN_EXT="${PornDrive:-OtherDrive}/*/*/*"
 
@@ -289,7 +289,6 @@ sendToSubler() {
 showMKVFiles() {
     for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
         SHOW_OUTPUT;
-        cd "$OLDPWD" || ! break;
     done
 }
 

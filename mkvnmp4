@@ -110,6 +110,7 @@ findCMD() {
 }
 
 outputMKVFiles() {
+    # This specific find command outputs the file in red
     if (find -s . -type f \( -iname "*.mkv" -o -iname "*.m4v" \) | grep -E ".*" >/dev/null) ; then
         echo ""
         while IFS= read -r file; do
@@ -120,6 +121,7 @@ outputMKVFiles() {
 }
 
 outputToSubler() {
+    # This bit of scripting runs through AppleScript to Subler
     while IFS= read -r file; do
         if [[ ! -e ${file%.mkv}.mp4 ]]; then
             echo ""
@@ -152,7 +154,7 @@ CONFIRM_DEL() {
 
 SHOW_OUTPUT() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]]&&
+        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]] &&
         echo "
       ############################################################
 ${RED}$file ${NORMAL}

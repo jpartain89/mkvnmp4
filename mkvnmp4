@@ -237,7 +237,7 @@ fi
 # This section is for the `dialog` prompts.
 # It uses the main `cmd` variable, as both prompts are simple and
 # the same size.
-cmd=(dialog --keep-title --menu "Select options: "  10 30 30)
+cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
 # Then, the different menu options have different variable arrays
 mediaOptions=(
     1 "All"

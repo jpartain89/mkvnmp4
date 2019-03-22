@@ -281,48 +281,15 @@ finalDelete() {
 
 sendToSubler() {
     for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
-        # The  || continue is in case the directory doesn't exist at this point.
-        # It keeps errors from occurring
-        #cd "$f" || continue;
         echo "${f}";
         outputToSubler;
-        #cd "$OLDPWD" || ! break;
-    done || ! cd - >&2
+    done
 }
 
 showMKVFiles() {
-    for choice3 in $choicesMedia; do
-        case $choice3 in
-            1 | TV )
-                for f in $TV_EXT ; do
-                    cd "$f" || continue;
-                    SHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            2 | Movies )
-                for f in $MOVIES_EXT ; do
-                    cd "$f" || continue;
-                    SHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            3 | Porn )
-                for f in $PORN_EXT ; do
-                    cd "$f" || continue;
-                    SHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            4 | Custom )
-                osascriptCustomSelector;
-                myFiles=("$directories"/*)
-                for f in "${myFiles[@]}" ; do
-                    cd "$f" || continue;
-                    SHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;
-                unset f myFiles directories;;
-            * )
-                USAGE; HELP_VERSION; exit 1;;
-        esac
+    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+        SHOW_OUTPUT;
+        cd "$OLDPWD" || ! break;
     done
 }
 

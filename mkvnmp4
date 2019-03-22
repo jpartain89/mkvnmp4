@@ -167,24 +167,30 @@ outputToSubler() {
 
 CONFIRM_DEL() {
     while IFS= read -r file; do
-        if [[ -e ${file%.mkv}.mp4 ]]; then
+        y="${file%.mkv}.mp4"
+        if [[ -e ${y} ]]; then
             echo "${RED}Erasing ${file}....${NORMAL}"
             echo ""
             rm -f "$file" ;
         fi
     done < <(findCMDmkv)
+    unset y
+
     while IFS= read -r file; do
-        if [[ -e ${file%.m4v}.mp4 ]]; then
+        y="${file%.m4v}.mp4"
+        if [[ ! -e ${y} ]]; then
             echo "${RED}Erasing ${file}....${NORMAL}"
             echo ""
             rm -f "$file" ;
         fi
     done < <(findCMDm4v)
+    unset y
 }
 
 SHOW_OUTPUT() {
     while IFS= read -r file; do
-        if [[ -e ${file%.mkv}.mp4 ]]; then
+        y="${file%.mkv}.mp4"
+        if [[ -e ${y} ]]; then
 
             cat <<EOF
 ###########################################################
@@ -195,9 +201,11 @@ EOF
 
         fi
     done < <(findCMDmkv)
+    unset y
 
     while IFS= read -r file; do
-        if [[ -e ${file%.m4v}.mp4 ]]; then
+        y="${file%.m4v}.mp4"
+        if [[ ! -e ${y} ]]; then
 
             cat <<EOF
 ###########################################################
@@ -208,6 +216,7 @@ EOF
 
         fi
     done < <(findCMDm4v)
+    unset y
 }
 
 kSHOW_OUTPUT() {

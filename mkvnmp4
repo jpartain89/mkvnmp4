@@ -110,11 +110,11 @@ EOF
 
 # This is the entire find command line for`mkv`
 findCMDmkv() {
-    find -s "${f}" -type f -iname "*.mkv"  -exec echo {} \;
+    find -s "${f}" -maxdepth 4 -type f -iname "*.mkv"  -exec echo {} \;
 }
 # This is the entire find command line for `m4v`
 findCMDm4v() {
-    find -s "${f}" -type f -iname "*.m4v"  -exec echo {} \;
+    find -s "${f}" -maxdepth 4 -type f -iname "*.m4v"  -exec echo {} \;
 }
 
 outputMKVFiles() {

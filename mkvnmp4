@@ -104,18 +104,33 @@ ${RED}Currently, this does not make sure the new, .mp4 version is not currently 
 EOF
 }
 
-# This is the entire find command line, with `mkv` and `m4v` included
-findCMD() {
-    find -s "${f}" -type f \( -iname "*.mkv" -o -iname "*.m4v" \)  -exec echo {} \;
+# The find commands, at this point, need to stay separate due to
+# the fact that the testing lines were still operating even if
+# the mp4's already existed
+
+# This is the entire find command line for`mkv`
+findCMDmkv() {
+    find -s "${f}" -type f -iname "*.mkv"  -exec echo {} \;
+}
+# This is the entire find command line for `m4v`
+findCMDm4v() {
+    find -s "${f}" -type f -iname "*.m4v"  -exec echo {} \;
 }
 
 outputMKVFiles() {
     # This specific find command outputs the file in red
-    if (find -s . -type f \( -iname "*.mkv" -o -iname "*.m4v" \) | grep -E ".*" >/dev/null) ; then
+    if (find -s . -type f -iname "*.mkv" | grep -E ".*" >/dev/null) ; then
         echo ""
         while IFS= read -r file; do
             echo "${file#./}"
-        done < <(findCMD)
+        done < <(findCMDmkv)
+        echo ""
+    fi
+    if (find -s . -type f -iname "*.m4v" | grep -E ".*" >/dev/null) ; then
+        echo ""
+        while IFS= read -r file; do
+            echo "${file#./}"
+        done < <(findCMDm4v)
         echo ""
     fi
 }
@@ -124,7 +139,6 @@ outputToSubler() {
     # This bit of scripting runs through AppleScript to Subler
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        z="${file%.m4v}.mp4"
         if [[ ! -e ${y} ]]; then
             echo ""
             echo "$file ${RED}<--THIS ONE${NORMAL}"
@@ -133,7 +147,12 @@ outputToSubler() {
                 tell application \"Subler\"
                     add to queue filePath
                 end tell"
-        elif [[ ! -e ${z} ]]; then
+        fi
+    done < <(findCMDmkv)
+    unset y
+    while IFS= read -r file; do
+        y="${file%.m4v}.mp4"
+        if [[ ! -e ${y} ]]; then
             echo ""
             echo "$file ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -142,27 +161,53 @@ outputToSubler() {
                     add to queue filePath
                 end tell"
         fi
-    done < <(findCMD)
+    done < <(findCMDm4v)
+    unset y
 }
 
 CONFIRM_DEL() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]] &&
-        echo "${RED}Erasing ${file}....${NORMAL}"
-        echo ""
-        rm -f "$file" ;
-    done < <(findCMD)
+        if [[ -e ${file%.mkv}.mp4 ]]; then
+            echo "${RED}Erasing ${file}....${NORMAL}"
+            echo ""
+            rm -f "$file" ;
+        fi
+    done < <(findCMDmkv)
+    while IFS= read -r file; do
+        if [[ -e ${file%.m4v}.mp4 ]]; then
+            echo "${RED}Erasing ${file}....${NORMAL}"
+            echo ""
+            rm -f "$file" ;
+        fi
+    done < <(findCMDm4v)
 }
 
 SHOW_OUTPUT() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]] &&
-        echo "
-      ############################################################"
-      echo "${RED}$file ${NORMAL}"
-      echo "${file%.mkv}.mp4"
-      echo "############################################################"
-    done < <(findCMD)
+        if [[ -e ${file%.mkv}.mp4 ]]; then
+
+            cat <<EOF
+###########################################################
+            ${RED}$file ${NORMAL}
+            ${file%.mkv}.mp4
+###########################################################
+EOF
+
+        fi
+    done < <(findCMDmkv)
+
+    while IFS= read -r file; do
+        if [[ -e ${file%.m4v}.mp4 ]]; then
+
+            cat <<EOF
+###########################################################
+            ${RED}$file ${NORMAL}
+            ${file%.m4v}.mp4
+###########################################################
+EOF
+
+        fi
+    done < <(findCMDm4v)
 }
 
 kSHOW_OUTPUT() {
@@ -204,80 +249,11 @@ actionOptions=(
 # And it assigns the NUMBER of the selection to the variable.
 choicesAction=$("${cmd[@]}" "${actionOptions[@]}" 2>&1 >/dev/tty)
 
-# These blocks were me playing with Apple's Automation stuff.
-appleScriptFunction() {
-    # This first item, the variable, is like the dialog selector from above,
-    # but it outputs the selections NAME into the variable.
-    choices=$(osascript -l JavaScript -e '
-        var app = Application.currentApplication()
-        app.includeStandardAdditions = true
-
-        var locationChoices = ["TV", "Movies", "Porn", "Custom"]
-        var locationList = app.chooseFromList(locationChoices, {
-            withPrompt: "Select options:",
-            defaultItems: ["TV"]
-        })
-        locationList' 2>&1)
-
-    # This is a custom directory selector, for narrowing
-    # the operation of the script.
-    osascriptCustomSelector() {
-        directories="$(osascript -l JavaScript -e '
-            var app = Application.currentApplication()
-            app.includeStandardAdditions = true
-
-            var outputFolder = app.chooseFolder({
-                withPrompt: "Please select a specific Directory to search through:",
-                multipleSelectionsAllowed: true
-            })
-            outputFolder' | cut -d '"' -f2)"
-    }
-}
-
-# The `choicesMedia` variable is for the 2nd question posed to the user.
-# This block is given first so that bash has it saved to operating memory
-# when asked to use it.
 finalDelete() {
-    for choice in $choicesMedia; do
-        case $choice in
-            2 | TV )
-                for f in $TV_EXT ; do
-                    #cd "$f" || continue;
-                    echo "${PWD}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            3 | Movies )
-                for f in $MOVIES_EXT ; do
-                    #cd "$f" || continue;
-                    echo "${PWD}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            4 | Porn )
-                for f in $PORN_EXT ; do
-                    #cd "$f" || continue;
-                    echo "${PWD}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            5 | Custom )
-                osascriptCustomSelector;
-                myFiles=("$directories"/*)
-                for f in "${myFiles[@]}" ; do
-                    #cd "$f" || continue;
-                    echo "${PWD}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;
-                unset f myFiles directories;;
-            * )
-                USAGE; HELP_VERSION; exit 1;;
-        esac
+    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+        echo "${f}";
+        SHOW_OUTPUT;
+        kSHOW_OUTPUT;
     done
 }
 

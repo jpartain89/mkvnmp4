@@ -80,7 +80,7 @@ else
 fi
 
 TV_EXT="${TVDrive:-OtherDrive}/*/*"
-MOVIES_EXT="${MovieDrive:-OtherDrive}/*/*"
+MOVIES_EXT="${MovieDrive:-OtherDrive}/*"
 PORN_EXT="${PornDrive:-OtherDrive}/*/*/*"
 
 RED=$(tput setaf 1)

@@ -122,14 +122,22 @@ outputMKVFiles() {
     if (find -s . -type f -iname "*.mkv" | grep -E ".*" >/dev/null) ; then
         echo ""
         while IFS= read -r file; do
-            echo "${file#./}"
+            y="${file%.mkv}.mp4"
+            if [[ ! -e ${y} ]]; then
+                echo ""
+                echo "$file"
+            fi
         done < <(findCMDmkv)
         echo ""
     fi
     if (find -s . -type f -iname "*.m4v" | grep -E ".*" >/dev/null) ; then
         echo ""
         while IFS= read -r file; do
-            echo "${file#./}"
+            y="${file%.m4v}.mp4"
+            if [[ ! -e ${y} ]]; then
+                echo ""
+                echo "$file"
+            fi
         done < <(findCMDm4v)
         echo ""
     fi

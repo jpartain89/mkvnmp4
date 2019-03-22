@@ -344,25 +344,25 @@ showMKVFiles() {
             1 | All )
                 for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
                     echo "${f}";
-                    SHOW_OUTPUT;
+                    outputMKVFiles;
                 done
                 ;;
             2 | TV )
                 for f in $TV_EXT; do
                     echo "${f}";
-                    SHOW_OUTPUT;
+                    outputMKVFiles;
                 done
                 ;;
             3 | Movies )
                 for f in $MOVIES_EXT; do
                     echo "${f}";
-                    SHOW_OUTPUT;
+                    outputMKVFiles;
                 done
                 ;;
             4 | Porn )
                 for f in $PORN_EXT; do
                     echo "${f}";
-                    SHOW_OUTPUT;
+                    outputMKVFiles;
                 done
                 ;;
             esac

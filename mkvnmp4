@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/usr/local/bin/bash -e
 shopt -s globstar
 
 # Copyright © 2018 JPCDI, JPartain89 and Justin Partain

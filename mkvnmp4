@@ -125,7 +125,7 @@ outputToSubler() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         z="${file%.m4v}.mp4"
-        if [[ -e ${y} ]]; then
+        if [[ ! -e ${y} ]]; then
             echo ""
             echo "$file ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -133,7 +133,7 @@ outputToSubler() {
                 tell application \"Subler\"
                     add to queue filePath
                 end tell"
-        elif [[ -e ${z} ]]; then
+        elif [[ ! -e ${z} ]]; then
             echo ""
             echo "$file ${RED}<--THIS ONE${NORMAL}"
             osascript -e "

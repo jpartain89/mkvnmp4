@@ -106,7 +106,7 @@ EOF
 
 # This is the entire find command line, with `mkv` and `m4v` included
 findCMD() {
-    find -s "${PWD}" -type f \( -iname "*.mkv" -o -iname "*.m4v" \)  -exec echo {} \;
+    find -s "${f}" -type f \( -iname "*.mkv" -o -iname "*.m4v" \)  -exec echo {} \;
 }
 
 outputMKVFiles() {
@@ -191,14 +191,7 @@ fi
 # It uses the main `cmd` variable, as both prompts are simple and
 # the same size.
 cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
-# Then, the different menu options have different variable arrays
-mediaOptions=(
-    1 "All"
-    2 "TV"
-    3 "Movies"
-    4 "Porn"
-    5 "Custom"
-)
+# Still show the actions
 actionOptions=(
     1 "Subler"
     2 "Delete_Duplicates"
@@ -208,7 +201,6 @@ actionOptions=(
 # happens here.
 # And it assigns the NUMBER of the selection to the variable.
 choicesAction=$("${cmd[@]}" "${actionOptions[@]}" 2>&1 >/dev/tty)
-choicesMedia=$("${cmd[@]}" "${mediaOptions[@]}" 2>&1 >/dev/tty)
 
 # These blocks were me playing with Apple's Automation stuff.
 appleScriptFunction() {
@@ -288,50 +280,14 @@ finalDelete() {
 }
 
 sendToSubler() {
-    for choice2 in $choicesMedia; do
-        case $choice2 in
-            1 | All )
-                for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
-                    cd "$f" || continue;
-                    echo "${PWD}";
-                    outputToSubler;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            2 | TV )
-                for f in $TV_EXT ; do
-                    cd "$f" || continue;
-                    echo "${PWD}";
-                    outputToSubler;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            3 | Movies )
-                for f in $MOVIES_EXT ; do
-                    cd "$f" || continue;
-                    echo "${PWD}";
-                    outputToSubler;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            4 | Porn )
-                for f in $PORN_EXT ; do
-                    cd "$f" || continue;
-                    echo "${PWD}";
-                    outputToSubler;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            5 | Custom )
-                osascriptCustomSelector;
-                myFiles=("$directories"/*)
-                for f in "${myFiles[@]}" ; do
-                    cd "$f" || continue;
-                    echo "${PWD}";
-                    outputToSubler;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;
-                unset f myFiles directories;;
-            * )
-                USAGE; HELP_VERSION; exit 1;;
-        esac
-    done
+    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+        # The  || continue is in case the directory doesn't exist at this point.
+        # It keeps errors from occurring
+        #cd "$f" || continue;
+        echo "${f}";
+        outputToSubler;
+        #cd "$OLDPWD" || ! break;
+    done || ! cd - >&2
 }
 
 showMKVFiles() {

@@ -79,9 +79,15 @@ else
     exit 1
 fi
 
-TV_EXT="${TVDrive:-OtherDrive}" #/*/*"
-MOVIES_EXT="${MovieDrive:-OtherDrive}" #/*"
-PORN_EXT="${PornDrive:-OtherDrive}" #"/*/*/*"
+if [ $# == -v ]; then
+    TV_EXT="${TVDrive:-OtherDrive}/*/*/*" 2>/dev/null
+    MOVIES_EXT="${MovieDrive:-OtherDrive}/*/*/*" 2/dev/null
+    PORN_EXT="${PornDrive:-OtherDrive}/*/*/*" 2>/dev/null
+else
+    TV_EXT="${TVDrive:-OtherDrive}"
+    MOVIES_EXT="${MovieDrive:-OtherDrive}"
+    PORN_EXT="${PornDrive:-OtherDrive}"
+fi
 
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr 0)

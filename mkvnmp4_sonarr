@@ -27,14 +27,14 @@ ssh jpartain89@192.168.0.15 "{
     cat << EOF > $TMP
 #!/usr/bin/env bash
 
-osascript -e "
-    set filePath to (POSIX file \"${sonarr_episodefile_path}\" as alias)
+osascript -e \"
+    set filePath to \(POSIX file \"${sonarr_episodefile_path}\" as alias\)
     tell application \"Subler\"
         add to queue filePath
-    end tell"
+    end tell\"
 EOF
 
-    bash "$TMP" &&
-    rm "$TMP"
+    bash $TMP &&
+    rm $TMP
     exit
     }"

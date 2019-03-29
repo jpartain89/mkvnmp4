@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 
 # Copyright © 2018-2019 JPCDI, JPartain89 and Justin Partain
 #
@@ -19,8 +18,14 @@ set -e
 # This script is to take media files downloaded and finished from sonarr and
 # make them mp4 and add in the correct metadata
 
+exec 1> >(logger -s -t "$(basename "$0")") 2>&1
+
+ssh jpartain89@192.168.0.15 << EOF
+
 osascript -e "
     set filePath to (POSIX file \"${sonarr_episodefile_path}\" as alias)
     tell application \"Subler\"
         add to queue filePath
     end tell"
+
+EOF

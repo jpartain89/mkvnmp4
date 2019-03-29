@@ -24,7 +24,7 @@ ssh jpartain89@192.168.0.15 "{
 
     TMP=$(mktemp)
 
-    cat << EOF > $TMP
+    cat << EOF > "$TMP"
 #!/usr/bin/env bash
 
 osascript -e \"
@@ -34,7 +34,7 @@ osascript -e \"
     end tell\"
 EOF
 
-    bash $TMP &&
-    rm $TMP
+    bash "$TMP" &&
+    rm "$TMP"
     exit
     }"

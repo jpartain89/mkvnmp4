@@ -20,11 +20,11 @@
 
 exec 1> >(logger -s -t "$(basename "$0")") 2>&1
 
-ssh jpartain89@192.168.0.15 {
+ssh jpartain89@192.168.0.15 "{
 
     osascript -e "
         set filePath to (POSIX file \"${sonarr_episodefile_path}\" as alias)
         tell application \"Subler\"
             add to queue filePath
         end tell"
-    }
+    }"

@@ -20,7 +20,7 @@
 
 exec 1> >(logger -s -t "$(basename "$0")") 2>&1
 
-ssh jpartain89@192.168.0.15 << EOF
+ssh jpartain89@192.168.0.15 << "EOF"
 
 osascript -e "
     set filePath to (POSIX file \"${sonarr_episodefile_path}\" as alias)

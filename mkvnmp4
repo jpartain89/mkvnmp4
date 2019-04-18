@@ -289,7 +289,7 @@ showMKVFiles() {
     done
 }
 
-if [[ "$?" == "" ]]; then USAGE; exit 1 fi
+#if [[ "$?" == "" ]]; then USAGE; exit 1 fi
 
 while getopts ":hSds" opt; do
     case ${opt} in
@@ -309,7 +309,7 @@ while getopts ":hSds" opt; do
             showMKVFiles
             exit 0
             ;;
-        \?  )
+        \? )
             echo "Invalid Option: -$OPTARG" 1>&2
             exit 1
             ;;

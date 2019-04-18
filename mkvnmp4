@@ -100,12 +100,16 @@ press_enter() {
 
 USAGE() {
 cat << EOF
-${PROGRAM_NAME}
+${PROGRAM_NAME} [ S | d | s | h ]
+
+    S : Send to Subler
+    d : Delete duplicate MKV's
+    s : Show Duplicates
+    h : This Help
 
     This program is to remove the duplicated .mkv files when the corresponding .mp4 file is present.
 
 ${RED}Currently, this does not make sure the new, .mp4 version is not currently being worked on - duplicated from the .mkv - or even correctly sourced from the .mkv.
-
             MAKE SURE TO DOUBLE CHECK FIRST!${NORMAL}
 EOF
 }
@@ -285,6 +289,8 @@ showMKVFiles() {
     done
 }
 
+if [[ "$?" == "" ]]; then "USAGE; exit 1" fi
+
 while getopts ":hSds" opt; do
     case ${opt} in
         h )
@@ -303,7 +309,7 @@ while getopts ":hSds" opt; do
             showMKVFiles
             exit 0
             ;;
-        \? )
+        \?  )
             echo "Invalid Option: -$OPTARG" 1>&2
             exit 1
             ;;

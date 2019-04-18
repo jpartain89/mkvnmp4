@@ -114,6 +114,9 @@ EOF
 # the fact that the testing lines were still operating even if
 # the mp4's already existed
 
+# Having separated them out, the process now takes - literally - twice
+# as long to process. But, for now, thats just fine.
+
 # This is the entire find command line for`mkv`
 findCMDmkv() {
     find -s "${f}" -maxdepth 4 -type f -iname "*.mkv"  -exec echo {} \;
@@ -157,6 +160,12 @@ outputToSubler() {
                 set filePath to (POSIX file \"$file\" as alias)
                 tell application \"Subler\"
                     add to queue filePath
+                    start queue and wait
+                    tell application \"Finder\"
+                        if exists file filePath then
+                            delete file filePath
+                        end if
+                    end tell
                 end tell"
         fi
     done < <(findCMDmkv)
@@ -167,10 +176,16 @@ outputToSubler() {
             echo ""
             echo "$file ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
-                set filePath to (POSIX file \"$file\" as alias)
-                tell application \"Subler\"
-                    add to queue filePath
-                end tell"
+            set filePath to (POSIX file \"$file\" as alias)
+            tell application \"Subler\"
+                add to queue filePath
+                start queue and wait
+                tell application \"Finder\"
+                    if exists file filePath then
+                        delete file filePath
+                    end if
+                end tell
+            end tell"
         fi
     done < <(findCMDm4v)
     unset y
@@ -249,140 +264,51 @@ EOF
 
 trap 'exit 1' SIGHUP SIGINT SIGTERM
 
-if [[ $? == "-h" ]]; then
-    USAGE
-    exit 0
-fi
-
-# This section is for the `dialog` prompts.
-# It uses the main `cmd` variable, as both prompts are simple and
-# the same size.
-cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
-# Then, the different menu options have different variable arrays
-mediaOptions=(
-    1 "All"
-    2 "TV"
-    3 "Movies"
-    4 "Porn"
-)
-actionOptions=(
-    1 "Subler"
-    2 "Delete_Duplicates"
-    3 "Show all MKV Files"
-)
-# Then, calling the actual dialog and assigning a number to the variable
-# happens here.
-# And it assigns the NUMBER of the selection to the variable.
-choicesAction=$("${cmd[@]}" "${actionOptions[@]}" 2>&1 >/dev/tty)
-choicesMedia=$("${cmd[@]}" "${mediaOptions[@]}" 2>&1 >/dev/tty)
-
 finalDelete() {
-    for choice in $choicesMedia; do
-        case $choice in
-            1 | All )
-                for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
-                    echo "${f}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                done
-                ;;
-            2 | TV )
-                for f in $TV_EXT; do
-                    echo "${f}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                done
-                ;;
-            3 | Movies )
-                for f in $MOVIES_EXT; do
-                    echo "${f}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                done
-                ;;
-            4 | Porn )
-                for f in $PORN_EXT; do
-                    echo "${f}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                done
-                ;;
-            esac
-        done
-        unset choice
+    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+        echo "${f}";
+        SHOW_OUTPUT;
+        kSHOW_OUTPUT;
+    done
 }
 
 sendToSubler() {
-    for choice in $choicesMedia; do
-        case $choice in
-            1 | All )
-                for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
-                    echo "${f}";
-                    outputToSubler;
-                done
-                ;;
-            2 | TV )
-                for f in $TV_EXT; do
-                    echo "${f}";
-                    outputToSubler;
-                done
-                ;;
-            3 | Movies )
-                for f in $MOVIES_EXT; do
-                    echo "${f}";
-                    outputToSubler;
-                done
-                ;;
-            4 | Porn )
-                for f in $PORN_EXT; do
-                    echo "${f}";
-                    outputToSubler;
-                done
-                ;;
-            esac
-        done
-        unset choice
+    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+        echo "${f}";
+        outputToSubler;
+    done
 }
 
 showMKVFiles() {
-    for choice in $choicesMedia; do
-        case $choice in
-            1 | All )
-                for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
-                    outputMKVFiles;
-                done
-                ;;
-            2 | TV )
-                for f in $TV_EXT; do
-                    outputMKVFiles;
-                done
-                ;;
-            3 | Movies )
-                for f in $MOVIES_EXT; do
-                    outputMKVFiles;
-                done
-                ;;
-            4 | Porn )
-                for f in $PORN_EXT; do
-                    outputMKVFiles;
-                done
-                ;;
-            esac
-        done
-        unset choice
+    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+        outputMKVFiles;
+    done
 }
 
-for choice in $choicesAction; do
-    case $choice in
-        1 )
-            sendToSubler;;
-        2 )
-            finalDelete;;
-        3 )
-            showMKVFiles;;
+while getopts ":hSds" opt; do
+    case ${opt} in
+        h )
+            USAGE
+            exit 0
+            ;;
+        S )
+            sendToSubler
+            exit 0
+            ;;
+        d )
+            finalDelete
+            exit 0
+            ;;
+        s )
+            showMKVFiles
+            exit 0
+            ;;
+        \? )
+            echo "Invalid Option: -$OPTARG" 1>&2
+            exit 1
+            ;;
     esac
 done
+shift $((OPTIND -1))
 
-echo ""
-unset choice
 exit 0

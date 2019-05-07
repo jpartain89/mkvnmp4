@@ -81,6 +81,7 @@ if [ -f /usr/local/opt/gnu-getopt/bin/getopt ]; then
 else
     die "Seems you're missing the required gnu-getopt program.
     Please install using brew install gnu-getopt."
+fi
 
 if [[ "$(uname)" == "Darwin" ]]; then
     if [ -d "${PornDrive}" ] || [ -d "${MovieDrive}" ]  || [ -d "${TVDrive}" ] || [ -d "${OtherDrive}" ]; then

@@ -233,7 +233,7 @@ outputToSubler_Wait() {
             osascript -e "
                 set filePath to (POSIX file \"$file\" as alias)
                 tell application \"Subler\"
-                    with timeout of '$TIMEOUT_WAIT' seconds
+                    with timeout of \"$TIMEOUT_WAIT\" seconds
                     add to queue filePath
                     start queue and wait
                     tell application \"Finder\"
@@ -254,7 +254,7 @@ outputToSubler_Wait() {
             osascript -e "
             set filePath to (POSIX file \"$file\" as alias)
             tell application \"Subler\"
-                with timeout of '$TIMEOUT_WAIT' seconds
+                with timeout of \"$TIMEOUT_WAIT\" seconds
                 add to queue filePath
                 start queue and wait
                 tell application \"Finder\"

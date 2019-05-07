@@ -357,11 +357,10 @@ showMKVFiles() {
     done
 }
 
-OPTS=$(${GETOPT} --options $SHORT --long $LONG -- "$@")
+OPTS=$(${GETOPT} --options $SHORT --long $LONG --name "$0" -- "$@")
 
-if [ $? = 0 ] ; then
-    echo "Failed to parse options, for some reason... exiting." >&2  &&
-    exit 1 ;
+if [ $? != 0 ] ; then
+    die "Failed to parse options...exiting." >&2
 fi
 
 eval set -- "$OPTS"

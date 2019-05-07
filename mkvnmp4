@@ -94,6 +94,8 @@ if [[ "$(uname)" == "Darwin" ]]; then
             You need to get the drives mounted before we can continue."
         fi
     done
+    unset f
+    unset COUNTER
 else
     die "Currently, only meant for macOS."
 fi
@@ -339,20 +341,13 @@ EOF
     fi
 }
 
-trap 'exit 1' SIGHUP SIGINT SIGTERM
+trap 'die 1' SIGHUP SIGINT SIGTERM
 
 finalDelete() {
     for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
         echo "${f}";
         SHOW_OUTPUT;
         kSHOW_OUTPUT;
-    done
-}
-
-sendToSubler() {
-    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
-        echo "${f}";
-        outputToSubler;
     done
 }
 
@@ -364,7 +359,7 @@ showMKVFiles() {
 
 OPTS=$(${GETOPT} --options $SHORT --long $LONG -- "$@")
 
-if [ $? != 0 ] ; then
+if [ $? = 0 ] ; then
     echo "Failed to parse options, for some reason... exiting." >&2  &&
     exit 1 ;
 fi

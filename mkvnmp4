@@ -93,14 +93,15 @@ else
     die "Currently, only meant for macOS."
 fi
 
+
 if [ $# == -v ]; then
     TV_EXT="${TVDrive:-OtherDrive}/*/*/*" 2>/dev/null
     MOVIES_EXT="${MovieDrive:-OtherDrive}/*/*/*" 2/dev/null
     PORN_EXT="${PornDrive:-OtherDrive}/*/*/*" 2>/dev/null
 else
-    TV_EXT="${TVDrive:-OtherDrive}"
-    MOVIES_EXT="${MovieDrive:-OtherDrive}"
-    PORN_EXT="${PornDrive:-OtherDrive}"
+    TV_EXT="${TVDrive:-OtherDrive}/*/*/*"
+    MOVIES_EXT="${MovieDrive:-OtherDrive}/*/*/*"
+    PORN_EXT="${PornDrive:-OtherDrive}/*/*/*"
 fi
 
 TIMEOUT_WAIT="${WAIT_TIMEOUT:-600}"

@@ -396,7 +396,7 @@ while true; do
             shift
             break
             ;;
-        \? | * )
+        * )
             die "Received invalid option. Sorry!"
             ;;
     esac

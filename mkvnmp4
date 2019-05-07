@@ -139,7 +139,7 @@ ${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
                   : delete the duplicates.
                   : Much safer than -rm below.
 
-        -rm `     : Remove duplicate MKV's that also have mp4
+        -rm       : Remove duplicate MKV's that also have mp4
         -dup      : Show Duplicates
       -h | --help : This Help
 

@@ -27,7 +27,12 @@ shopt -s globstar
 # Program information
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
-VERSION="4.0.0"
+VERSION="4.5.0"
+
+die() {
+    echo "$PROGRAM_NAME: $1" >&2
+    exit "${2:-1}"
+}
 
 command -v "$PROGRAM_NAME" 1>/dev/null 2>&1 || {
     (
@@ -49,7 +54,7 @@ elif [ -f ~/.mkvnmp4.conf ]; then
 elif [ -f ~/.config/mkvnmp4.conf ]; then
     . ~/.config/mkvnmp4.conf
 else
-    cat << EOF
+    die << EOF
 We couldn't find the mkvnmp4.conf configuration file that we require to run!
 The file is looked for at:
 
@@ -66,17 +71,26 @@ EOF
     exit 1
 fi
 
+# This tests for gnu-getopt, as thats needed to run
+if [ -f /usr/local/opt/gnu-getopt/bin/getopt ]; then
+    GETOPT="/usr/local/opt/gnu-getopt/bin/getopt"
+    if [ "$GETOPT" --test; echo $? != 4 ]; then
+        die "You seem to have the wrong version of gnu-getopt?
+        Please investigate and have the proper one installed."
+    fi
+else
+    die "Seems you're missing the required gnu-getopt program.
+    Please install using brew install gnu-getopt."
+
 if [[ "$(uname)" == "Darwin" ]]; then
     if [ -d "${PornDrive}" ] || [ -d "${MovieDrive}" ]  || [ -d "${TVDrive}" ] || [ -d "${OtherDrive}" ]; then
         true
     else
-        echo "Your configured drives are not present."
-        echo "You need to get the drives mounted before we can continue."
-        exit 1
+        die "Your configured drives are not present.
+        You need to get the drives mounted before we can continue."
     fi
 else
-    echo "Currently, only meant for macOS."
-    exit 1
+    die "Currently, only meant for macOS."
 fi
 
 if [ $# == -v ]; then
@@ -89,6 +103,8 @@ else
     PORN_EXT="${PornDrive:-OtherDrive}"
 fi
 
+TIMEOUT_WAIT="${WAIT_TIMEOUT:-600}"
+
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr 0)
 
@@ -98,14 +114,21 @@ press_enter() {
     read -r
 }
 
+# These are declaring our command line flags for getopt lower down
+SHORT=swh
+LONG=send,wait,rm,dup,help
+
 USAGE() {
 cat << EOF
-${PROGRAM_NAME} [ -s | --send | --rm | --dup | -h | --help ]
-                  | --wait |
+${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
+                [ --rm ]
+                [ --dup ]
+                [ -h | --help ]
 
       -s | --send : Send to Subler
-       --wait     : Subcommand to -s or --send, tells Subler to wait
-                  : between jobs in order to auto delete the duplicates.
+            -- or --
+      -w | --wait : Tells Subler to wait between jobs in order to auto
+                  : delete the duplicates.
                   : Much safer than -rm below.
 
         -rm `     : Remove duplicate MKV's that also have mp4
@@ -113,7 +136,7 @@ ${PROGRAM_NAME} [ -s | --send | --rm | --dup | -h | --help ]
       -h | --help : This Help
 
     This program is to send found mkv files to Subler using Apple's AppleScript automation backend.
-    When using --wait with -s or --send, the program will sit and wait until the current item is being processed in Subler.
+    When using -w or  --wait, the program will sit and wait until the current item is being processed in Subler.
     You can change the default length of time it waits in the above configuration file using WAIT_TIMEOUT=600 - and it is in seconds.
 EOF
 }
@@ -135,30 +158,31 @@ findCMDm4v() {
 }
 
 outputMKVFiles() {
-        while IFS= read -r file; do
-            y="${file%.mkv}.mp4"
-            if [[ ! -e ${y} ]]; then
-                echo ""
-                echo "$file"
-            else
-                echo ""
-                echo "$file"
-            fi
-        done < <(findCMDmkv)
-        while IFS= read -r file; do
-            y="${file%.m4v}.mp4"
-            if [[ ! -e ${y} ]]; then
-                echo ""
-                echo "$file"
-            else
-                echo ""
-                echo "$file"
-            fi
-        done < <(findCMDm4v)
+    while IFS= read -r file; do
+        y="${file%.mkv}.mp4"
+        if [[ ! -e ${y} ]]; then
+            echo ""
+            echo "$file"
+        else
+            echo ""
+            echo "$file"
+        fi
+    done < <(findCMDmkv)
+    while IFS= read -r file; do
+        y="${file%.m4v}.mp4"
+        if [[ ! -e ${y} ]]; then
+            echo ""
+            echo "$file"
+        else
+            echo ""
+            echo "$file"
+        fi
+    done < <(findCMDm4v)
 }
 
-outputToSubler() {
+outputToSubler_NoWait() {
     # This bit of scripting runs through AppleScript to Subler
+    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do echo "${f}";
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ ! -e ${y} ]]; then
@@ -167,7 +191,41 @@ outputToSubler() {
             osascript -e "
                 set filePath to (POSIX file \"$file\" as alias)
                 tell application \"Subler\"
-                    with timeout of '$WAIT_TIMEOUT' seconds
+                    add to queue filePath
+                    start queue
+                end tell"
+        fi
+    done < <(findCMDmkv)
+    unset y
+    while IFS= read -r file; do
+        y="${file%.m4v}.mp4"
+        if [[ ! -e ${y} ]]; then
+            echo ""
+            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            osascript -e "
+            set filePath to (POSIX file \"$file\" as alias)
+            tell application \"Subler\"
+                add to queue filePath
+                start queue
+            end tell"
+        fi
+    done < <(findCMDm4v)
+    unset y
+    done
+}
+
+outputToSubler_Wait() {
+    # This bit of scripting runs through AppleScript to Subler
+    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do echo "${f}";
+    while IFS= read -r file; do
+        y="${file%.mkv}.mp4"
+        if [[ ! -e ${y} ]]; then
+            echo ""
+            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            osascript -e "
+                set filePath to (POSIX file \"$file\" as alias)
+                tell application \"Subler\"
+                    with timeout of '$TIMEOUT_WAIT' seconds
                     add to queue filePath
                     start queue and wait
                     tell application \"Finder\"
@@ -188,7 +246,7 @@ outputToSubler() {
             osascript -e "
             set filePath to (POSIX file \"$file\" as alias)
             tell application \"Subler\"
-                with timeout of '$WAIT_TIMEOUT' seconds
+                with timeout of '$TIMEOUT_WAIT' seconds
                 add to queue filePath
                 start queue and wait
                 tell application \"Finder\"
@@ -201,6 +259,7 @@ outputToSubler() {
         fi
     done < <(findCMDm4v)
     unset y
+    done
 }
 
 CONFIRM_DEL() {
@@ -297,32 +356,49 @@ showMKVFiles() {
     done
 }
 
-#if [[ "$?" == "" ]]; then USAGE; exit 1 fi
+OPTS=$(getopt --options $SHORT --long $LONG -- "$@")
 
-while getopts ":hSds" opt; do
-    case ${opt} in
-        h )
+if [ $? != 0 ] ; then
+    echo "Failed to parse options, for some reason... exiting." >&2  &&
+    exit 1 ;
+fi
+
+eval set -- "$OPTS"
+
+while true; do
+    case "$1" in
+        -h | --help )
             USAGE
             exit 0
             ;;
-        S )
-            sendToSubler
+        -s | --send )
+            outputToSubler_NoWait
             exit 0
             ;;
-        d )
+        -w | --wait )
+            outputToSubler_Wait
+            exit 0
+            ;;
+        --rm )
             finalDelete
             exit 0
             ;;
-        s )
+        --dup )
             showMKVFiles
             exit 0
             ;;
-        \? )
-            echo "Invalid Option: -$OPTARG" 1>&2
-            exit 1
+        -h | --help )
+            USAGE
+            exit 0
+            ;;
+        -- )
+            shift
+            break
+            ;;
+        \? | * )
+            die "Received invalid option. Sorry!"
             ;;
     esac
 done
-shift $((OPTIND -1))
 
 exit 0

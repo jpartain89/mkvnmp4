@@ -100,17 +100,21 @@ press_enter() {
 
 USAGE() {
 cat << EOF
-${PROGRAM_NAME} [ S | d | s | h ]
+${PROGRAM_NAME} [ -s | --send | --rm | --dup | -h | --help ]
+                  | --wait |
 
-    S : Send to Subler
-    d : Delete duplicate MKV's
-    s : Show Duplicates
-    h : This Help
+      -s | --send : Send to Subler
+       --wait     : Subcommand to -s or --send, tells Subler to wait
+                  : between jobs in order to auto delete the duplicates.
+                  : Much safer than -rm below.
 
-    This program is to remove the duplicated .mkv files when the corresponding .mp4 file is present.
+        -rm `     : Remove duplicate MKV's that also have mp4
+        -dup      : Show Duplicates
+      -h | --help : This Help
 
-${RED}Currently, this does not make sure the new, .mp4 version is not currently being worked on - duplicated from the .mkv - or even correctly sourced from the .mkv.
-            MAKE SURE TO DOUBLE CHECK FIRST!${NORMAL}
+    This program is to send found mkv files to Subler using Apple's AppleScript automation backend.
+    When using --wait with -s or --send, the program will sit and wait until the current item is being processed in Subler.
+    You can change the default length of time it waits in the above configuration file using WAIT_TIMEOUT=600 - and it is in seconds.
 EOF
 }
 
@@ -163,6 +167,7 @@ outputToSubler() {
             osascript -e "
                 set filePath to (POSIX file \"$file\" as alias)
                 tell application \"Subler\"
+                    with timeout of '$WAIT_TIMEOUT' seconds
                     add to queue filePath
                     start queue and wait
                     tell application \"Finder\"
@@ -170,6 +175,7 @@ outputToSubler() {
                             delete file filePath
                         end if
                     end tell
+                    end timeout
                 end tell"
         fi
     done < <(findCMDmkv)
@@ -182,12 +188,14 @@ outputToSubler() {
             osascript -e "
             set filePath to (POSIX file \"$file\" as alias)
             tell application \"Subler\"
+                with timeout of '$WAIT_TIMEOUT' seconds
                 add to queue filePath
                 start queue and wait
                 tell application \"Finder\"
                     if exists file filePath then
                         delete file filePath
                     end if
+                end timeout
                 end tell
             end tell"
         fi

@@ -74,7 +74,7 @@ fi
 # This tests for gnu-getopt, as thats needed to run
 if [ -f /usr/local/opt/gnu-getopt/bin/getopt ]; then
     GETOPT="/usr/local/opt/gnu-getopt/bin/getopt"
-    if [ "$GETOPT" --test; echo $? != 4 ]; then
+    if [ $("$GETOPT" --test; echo $?) != 4 ]; then
         die "You seem to have the wrong version of gnu-getopt?
         Please investigate and have the proper one installed."
     fi

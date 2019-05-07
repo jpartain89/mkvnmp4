@@ -84,12 +84,16 @@ else
 fi
 
 if [[ "$(uname)" == "Darwin" ]]; then
-    if [ -d "${PornDrive}" ] || [ -d "${MovieDrive}" ]  || [ -d "${TVDrive}" ] || [ -d "${OtherDrive}" ]; then
-        true
-    else
-        die "Your configured drives are not present.
-        You need to get the drives mounted before we can continue."
-    fi
+    COUNTER=0
+    for f in "${PornDrive}" "${MovieDrive}" "${TVDrive}" "${OtherDrive}"; do
+        if [ -d "$f" ]; then
+            COUNTER=$[ $COUNTER +1 ]
+        fi
+        if [ $COUNTER == 0 ]; then
+            die "Your configured drives are not present.
+            You need to get the drives mounted before we can continue."
+        fi
+    done
 else
     die "Currently, only meant for macOS."
 fi

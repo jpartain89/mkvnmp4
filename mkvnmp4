@@ -39,9 +39,8 @@ command -v "${PROGRAM_NAME}" 1>/dev/null 2>&1 || {
             sudo ln -svf "${DIR}/${PROGRAM_NAME}" "/usr/local/bin/${PROGRAM_NAME}"
             sudo chmod -R 0775 "/usr/local/bin/${PROGRAM_NAME}"
         else
-            echo "For some reason, linking $PROGRAM_NAME to /usr/local/bin,"
-            echo "failed. My apologies for not being able to figure it out..."
-            exit 1
+            die "For some reason, linking ${PROGRAM_NAME} to /usr/local/bin,
+            failed. My apologies for not being able to figure it out..."
         fi
     )
 }

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -e
-shopt -s globstar
 
 # Copyright © 2018-2019 JPCDI, JPartain89 and Justin Partain
 #
@@ -30,11 +29,11 @@ PROGRAM_NAME="mkvnmp4"
 VERSION="4.5.0"
 
 die() {
-    echo "$PROGRAM_NAME: $1" >&2
+    echo "${PROGRAM_NAME}: $1" >&2
     exit "${2:-1}"
 }
 
-command -v "$PROGRAM_NAME" 1>/dev/null 2>&1 || {
+command -v "${PROGRAM_NAME}" 1>/dev/null 2>&1 || {
     (
         if [ -x "${DIR}/${PROGRAM_NAME}" ]; then
             sudo ln -svf "${DIR}/${PROGRAM_NAME}" "/usr/local/bin/${PROGRAM_NAME}"
@@ -87,9 +86,9 @@ if [[ "$(uname)" == "Darwin" ]]; then
     COUNTER=0
     for f in "${PornDrive}" "${MovieDrive}" "${TVDrive}" "${OtherDrive}"; do
         if [ -d "$f" ]; then
-            COUNTER=$[ $COUNTER +1 ]
+            COUNTER=$[ ${COUNTER} +1 ]
         fi
-        if [ $COUNTER == 0 ]; then
+        if [ ${COUNTER} == 0 ]; then
             die "Your configured drives are not present.
             You need to get the drives mounted before we can continue."
         fi
@@ -175,34 +174,35 @@ outputMKVFiles() {
         y="${file%.mkv}.mp4"
         if [[ ! -e ${y} ]]; then
             echo ""
-            echo "$file"
+            echo "${file}"
         else
             echo ""
-            echo "$file"
+            echo "${file}"
         fi
     done < <(findCMDmkv)
     while IFS= read -r file; do
         y="${file%.m4v}.mp4"
         if [[ ! -e ${y} ]]; then
             echo ""
-            echo "$file"
+            echo "${file}"
         else
             echo ""
-            echo "$file"
+            echo "${file}"
         fi
     done < <(findCMDm4v)
 }
 
 outputToSubler_NoWait() {
     # This bit of scripting runs through AppleScript to Subler
-    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do echo "${f}";
+    # without the waiting and Moving to Trash step
+    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do echo "${f}";
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ ! -e ${y} ]]; then
             echo ""
-            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
-                set filePath to (POSIX file \"$file\" as alias)
+                set filePath to (POSIX file \"${file}\" as alias)
                 tell application \"Subler\"
                     add to queue filePath
                     start queue
@@ -214,9 +214,9 @@ outputToSubler_NoWait() {
         y="${file%.m4v}.mp4"
         if [[ ! -e ${y} ]]; then
             echo ""
-            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
-            set filePath to (POSIX file \"$file\" as alias)
+            set filePath to (POSIX file \"${file}\" as alias)
             tell application \"Subler\"
                 add to queue filePath
                 start queue
@@ -229,15 +229,15 @@ outputToSubler_NoWait() {
 
 outputToSubler_Wait() {
     # This bit of scripting runs through AppleScript to Subler
-    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do echo "${f}";
+    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do echo "${f}";
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ ! -e ${y} ]]; then
             echo ""
-            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
-                set filePath to (POSIX file \"$file\" as alias)
-                set TimeOutWait to $TIMEOUT_WAIT
+                set filePath to (POSIX file \"${file}\" as alias)
+                set TimeOutWait to \"${TIMEOUT_WAIT}\"
                 tell application \"Subler\"
                     with timeout of \"$TIMEOUT_WAIT\" seconds
                     add to queue filePath
@@ -256,10 +256,10 @@ outputToSubler_Wait() {
         y="${file%.m4v}.mp4"
         if [[ ! -e ${y} ]]; then
             echo ""
-            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
-            set filePath to (POSIX file \"$file\" as alias)
-            set TimeOutWait to $TIMEOUT_WAIT
+            set filePath to (POSIX file \"${file}\" as alias)
+            set TimeOutWait to \"${TIMEOUT_WAIT}\"
             tell application \"Subler\"
                 with timeout of \"$TIMEOUT_WAIT\" seconds
                 add to queue filePath
@@ -283,7 +283,7 @@ CONFIRM_DEL() {
         if [[ -e ${y} ]]; then
             echo "${RED}Erasing ${file}....${NORMAL}"
             echo ""
-            rm -f "$file" ;
+            rm -f "${file}" ;
         fi
     done < <(findCMDmkv)
     unset y
@@ -293,7 +293,7 @@ CONFIRM_DEL() {
         if [[ -e ${y} ]]; then
             echo "${RED}Erasing ${file}....${NORMAL}"
             echo ""
-            rm -f "$file" ;
+            rm -f "${file}" ;
         fi
     done < <(findCMDm4v)
     unset y
@@ -306,7 +306,7 @@ SHOW_OUTPUT() {
 
             cat <<EOF
 ###########################################################
-${RED}$file ${NORMAL}
+${RED}${file} ${NORMAL}
 ${file%.mkv}.mp4
 ###########################################################
 EOF
@@ -321,7 +321,7 @@ EOF
 
             cat <<EOF
 ###########################################################
-${RED}$file ${NORMAL}
+${RED}${file} ${NORMAL}
 ${file%.m4v}.mp4
 ###########################################################
 EOF
@@ -351,7 +351,7 @@ EOF
 trap 'die 1' SIGHUP SIGINT SIGTERM
 
 finalDelete() {
-    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do
         echo "${f}";
         SHOW_OUTPUT;
         kSHOW_OUTPUT;
@@ -359,12 +359,12 @@ finalDelete() {
 }
 
 showMKVFiles() {
-    for f in $TV_EXT $MOVIES_EXT $PORN_EXT; do
+    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do
         outputMKVFiles;
     done
 }
 
-OPTS=$(${GETOPT} --options $SHORT --long $LONG --name "$0" -- "$@")
+OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
 
 if [ $? != 0 ] ; then
     die "Failed to parse options...exiting." >&2

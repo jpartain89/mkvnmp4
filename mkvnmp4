@@ -124,7 +124,7 @@ press_enter() {
 SHORT=swh
 LONG=send,wait,rm,dup,help
 
-USAGE() {
+usage() {
 cat << EOF
 ${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
              |--[ --rm ]
@@ -276,7 +276,7 @@ outputToSubler_Wait() {
     done
 }
 
-CONFIRM_DEL() {
+confirmDel() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ -e ${y} ]]; then
@@ -298,7 +298,7 @@ CONFIRM_DEL() {
     unset y
 }
 
-SHOW_OUTPUT() {
+ShowOutPut() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ ! -e ${y} ]]; then
@@ -330,8 +330,10 @@ EOF
     unset y
 }
 
-kSHOW_OUTPUT() {
-    if [[ $(SHOW_OUTPUT) != "" ]]; then
+# This is the block that goes through and finalizes the removal
+# of the duplicated files, removing the mkv or m4v files.
+kShowOutPut() {
+    if [[ ShowOutPut != "" ]]; then
 cat << EOF
 
 Please, examine the above files to confirm they are ready to be removed.
@@ -341,7 +343,7 @@ Usually....
 
 EOF
         press_enter &&
-        CONFIRM_DEL &&
+        confirmDel &&
         echo "Finished Deleting...."
         echo ""
     fi
@@ -352,8 +354,8 @@ trap 'die 1' SIGHUP SIGINT SIGTERM
 finalDelete() {
     for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do
         echo "${f}";
-        SHOW_OUTPUT;
-        kSHOW_OUTPUT;
+        ShowOutPut;
+        kShowOutPut;
     done
 }
 
@@ -374,7 +376,7 @@ eval set -- "$OPTS"
 while true; do
     case "$1" in
         -h | --help )
-            USAGE
+            usage
             exit 0
             ;;
         -s | --send )
@@ -394,7 +396,7 @@ while true; do
             exit 0
             ;;
         -h | --help )
-            USAGE
+            usage
             exit 0
             ;;
         -- )

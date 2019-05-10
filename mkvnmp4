@@ -239,7 +239,7 @@ outputToSubler_Wait() {
                 set filePath to (POSIX file \"$file\" as alias)
                 set TimeOutWait to $TIMEOUT_WAIT
                 tell application \"Subler\"
-                    with timeout of TimeOutWait seconds
+                    with timeout of \"$TIMEOUT_WAIT\" seconds
                     add to queue filePath
                     start queue and wait
                     tell application \"Finder\"
@@ -261,7 +261,7 @@ outputToSubler_Wait() {
             set filePath to (POSIX file \"$file\" as alias)
             set TimeOutWait to $TIMEOUT_WAIT
             tell application \"Subler\"
-                with timeout of TimeOutWait seconds
+                with timeout of \"$TIMEOUT_WAIT\" seconds
                 add to queue filePath
                 start queue and wait
                 tell application \"Finder\"

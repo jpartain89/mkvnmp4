@@ -98,7 +98,6 @@ else
     die "Currently, only meant for macOS."
 fi
 
-
 if [ $# == -v ]; then
     TV_EXT="${TVDrive:-OtherDrive}" 2>&1
     MOVIES_EXT="${MovieDrive:-OtherDrive}" 2>&1
@@ -125,6 +124,7 @@ cat << EOF
 ${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
              |--[ --rm ]
              |--[ --dup ]
+             |--[ -v ]
              |--[ -h | --help ]
 
       -s | --send : Send to Subler
@@ -136,6 +136,7 @@ ${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
         -rm       : Remove duplicate MKV's that also have mp4
         -dup      : Show Duplicates
       -h | --help : This Help
+        -v        : Increase the verbosity
 
     This program is to send mkv files to Subler using Apple's AppleScript automation backend.
 
@@ -368,6 +369,10 @@ SHORT=swh
 LONG=send,wait,rm,dup,help
 
 OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
+
+if [ -z $# ]; then
+  outputToSubler_NoWait && die 0
+fi
 
 if [ $? != 0 ] ; then
     die "Failed to parse options...exiting." >&2

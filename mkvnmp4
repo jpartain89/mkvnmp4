@@ -370,7 +370,7 @@ LONG=send,wait,rm,dup,help
 
 OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
 
-if [ -z $# ]; then
+if [ $# == 0 ]; then
   outputToSubler_NoWait && die 0
 fi
 

@@ -72,7 +72,7 @@ fi
 # This tests for gnu-getopt, as thats needed to run
 if [ -f /usr/local/opt/gnu-getopt/bin/getopt ]; then
     GETOPT="/usr/local/opt/gnu-getopt/bin/getopt"
-    if [ $("$GETOPT" --test; echo $?) != 4 ]; then
+    if [ "$("$GETOPT" --test; echo $?)" != 4 ]; then
         die "You seem to have the wrong version of gnu-getopt?
         Please investigate and have the proper one installed."
     fi
@@ -85,9 +85,9 @@ if [[ "$(uname)" == "Darwin" ]]; then
     COUNTER=0
     for f in "${PornDrive}" "${MovieDrive}" "${TVDrive}" "${OtherDrive}"; do
         if [ -d "$f" ]; then
-            COUNTER=$[ ${COUNTER} +1 ]
+            COUNTER=$((COUNTER +1 ))
         fi
-        if [ ${COUNTER} == 0 ]; then
+        if [ "${COUNTER}" == 0 ]; then
             die "Your configured drives are not present.
             You need to get the drives mounted before we can continue."
         fi
@@ -119,10 +119,6 @@ press_enter() {
     echo -n "Press Enter to Continue..."
     read -r
 }
-
-# These are declaring our command line flags for getopt lower down
-SHORT=swh
-LONG=send,wait,rm,dup,help
 
 usage() {
 cat << EOF
@@ -365,6 +361,10 @@ showMKVFiles() {
     done
 }
 
+# These are declaring our command line flags for getopt lower down
+SHORT=swh
+LONG=send,wait,rm,dup,help
+
 OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
 
 if [ $? != 0 ] ; then
@@ -375,10 +375,6 @@ eval set -- "$OPTS"
 
 while true; do
     case "$1" in
-        -h | --help )
-            usage
-            exit 0
-            ;;
         -s | --send )
             outputToSubler_NoWait
             exit 0

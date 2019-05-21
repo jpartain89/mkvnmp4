@@ -145,6 +145,8 @@ ${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
     The amount of time before timeout is reached can be adjusted using the variable WAIT_TIMEOUT.
       The amount of time is in seconds, so WAIT_TIMEOUT=600 would be a timeout of 5 minutes.
       If you find that Subler tends to take longer for you, you're welcome to change that.
+
+    -s | --send is the default option, if you don't have any CLI flags.
 EOF
 }
 
@@ -400,7 +402,7 @@ while true; do
             break
             ;;
         * )
-            die "Received invalid option. Sorry!"
+            outputToSubler_NoWait
             ;;
     esac
 done

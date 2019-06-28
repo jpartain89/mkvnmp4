@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 # Copyright © 2018-2019 JPCDI, JPartain89 and Justin Partain
 #
@@ -25,17 +26,21 @@
 # Program information
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
-VERSION="3.0.0"
+VERSION="4.5.0"
 
-command -v "$PROGRAM_NAME" 1>/dev/null 2>&1 || {
+die() {
+    echo "${PROGRAM_NAME}: $1" >&2
+    exit "${2:-1}"
+}
+
+command -v "${PROGRAM_NAME}" 1>/dev/null 2>&1 || {
     (
         if [ -x "${DIR}/${PROGRAM_NAME}" ]; then
             sudo ln -svf "${DIR}/${PROGRAM_NAME}" "/usr/local/bin/${PROGRAM_NAME}"
             sudo chmod -R 0775 "/usr/local/bin/${PROGRAM_NAME}"
         else
-            echo "For some reason, linking $PROGRAM_NAME to /usr/local/bin,"
-            echo "failed. My apologies for not being able to figure it out..."
-            exit 1
+            die "For some reason, linking ${PROGRAM_NAME} to /usr/local/bin,
+            failed. My apologies for not being able to figure it out..."
         fi
     )
 }
@@ -47,11 +52,12 @@ elif [ -f ~/.mkvnmp4.conf ]; then
 elif [ -f ~/.config/mkvnmp4.conf ]; then
     . ~/.config/mkvnmp4.conf
 else
-    cat << EOF
+    die << EOF
 We couldn't find the mkvnmp4.conf configuration file that we require to run!
 The file is looked for at:
 
     /etc/mkvnmp4.conf
+            - or -
     ~/.mkvnmp4.conf
             - or -
     ~/.config/mkvnmp4.conf
@@ -61,26 +67,48 @@ This repo has a configuration file example that you can key off of for what you 
 Exiting now.
 EOF
     exit 1
+fi
 
+# This tests for gnu-getopt, as thats needed to run
+if [ -f /usr/local/opt/gnu-getopt/bin/getopt ]; then
+    GETOPT="/usr/local/opt/gnu-getopt/bin/getopt"
+    if [ "$("$GETOPT" --test; echo $?)" != 4 ]; then
+        die "You seem to have the wrong version of gnu-getopt?
+        Please investigate and have the proper one installed."
+    fi
+else
+    die "Seems you're missing the required gnu-getopt program.
+    Please install using brew install gnu-getopt."
 fi
 
 if [[ "$(uname)" == "Darwin" ]]; then
-    if [ -d "${pornDRIVE}" ] || [ -d "${movieDRIVE}" ]  || [ -d "${tvDRIVE}" ] || [ -d "${extDRIVE}" ]; then
-        echo "Tested for directory existence. Continuing."
-    else
-        echo "Your configured drives are not present."
-        echo "You need to get the drives mounted before we can continue."
-        exit 1
-    fi
+    COUNTER=0
+    for f in "${PornDrive}" "${MovieDrive}" "${TVDrive}" "${OtherDrive}"; do
+        if [ -d "$f" ]; then
+            COUNTER=$((COUNTER +1 ))
+        fi
+        if [ "${COUNTER}" == 0 ]; then
+            die "Your configured drives are not present.
+            You need to get the drives mounted before we can continue."
+        fi
+    done
+    unset f
+    unset COUNTER
 else
-    echo "Currently, only meant for macOS."
-    exit 1
+    die "Currently, only meant for macOS."
 fi
 
-tmp_file="$(mktemp)"
-TV_EXT="${tvDRIVE:-extDrive}/*/*/"
-MOVIES_EXT="${movieDRIVE:-extDrive}/*/"
-PORN_EXT="${pornDRIVE:-extDrive}/*/*/"
+if [ $# == -v ]; then
+    TV_EXT="${TVDrive:-OtherDrive}" 2>&1
+    MOVIES_EXT="${MovieDrive:-OtherDrive}" 2>&1
+    PORN_EXT="${PornDrive:-OtherDrive}" 2>&1
+else
+    TV_EXT="${TVDrive:-OtherDrive}"
+    MOVIES_EXT="${MovieDrive:-OtherDrive}"
+    PORN_EXT="${PornDrive:-OtherDrive}"
+fi
+
+TIMEOUT_WAIT="${WAIT_TIMEOUT:-600}"
 
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr 0)
@@ -91,77 +119,220 @@ press_enter() {
     read -r
 }
 
-USAGE() {
+usage() {
 cat << EOF
-${PROGRAM_NAME}
+${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
+             |--[ --rm ]
+             |--[ --dup ]
+             |--[ -v ]
+             |--[ -h | --help ]
 
-    This program is to remove the duplicated .mkv files when the corresponding .mp4 file is present.
+      -s | --send : Send to Subler
+            -- or --
+      -w | --wait : Tells Subler to wait between jobs in order to auto
+                  : delete the duplicates.
+                  : Much safer than -rm below.
 
-${RED}Currently, this does not make sure the new, .mp4 version is not currently being worked on - duplicated from the .mkv - or even correctly sourced from the .mkv.
+        -rm       : Remove duplicate MKV's that also have mp4
+        -dup      : Show Duplicates
+      -h | --help : This Help
+        -v        : Increase the verbosity
 
-            MAKE SURE TO DOUBLE CHECK FIRST!${NORMAL}
+    This program is to send mkv files to Subler using Apple's AppleScript automation backend.
+
+    When using -w or --wait, we will sit and wait until the current item is finished
+      processing in Subler. At that point, the original mkv file gets moved to the trash.
+
+    The amount of time before timeout is reached can be adjusted using the variable WAIT_TIMEOUT.
+      The amount of time is in seconds, so WAIT_TIMEOUT=600 would be a timeout of 5 minutes.
+      If you find that Subler tends to take longer for you, you're welcome to change that.
+
+    -s | --send is the default option, if you don't have any CLI flags.
 EOF
 }
 
-# This is the entire find command line, with `mkv` and `m4v` included
-findCMD() {
-    find -s "${PWD}" -type f \( -iname "*.mkv" -o -iname "*.m4v" \)  -exec echo {} \;
+# The find commands, at this point, need to stay separate due to
+# the fact that the testing lines were still operating even if
+# the mp4's already existed
+
+# Having separated them out, the process now takes - literally - twice
+# as long to process. But, for now, thats just fine.
+
+# This is the entire find command line for`mkv`
+findCMDmkv() {
+    find -s "${f}" -maxdepth 4 -type f -iname "*.mkv"  -exec echo {} \;
+}
+# This is the entire find command line for `m4v`
+findCMDm4v() {
+    find -s "${f}" -maxdepth 4 -type f -iname "*.m4v"  -exec echo {} \;
 }
 
 outputMKVFiles() {
-    if (find -s . -type f \( -iname "*.mkv" -o -iname "*.m4v" \) | grep -E ".*" >/dev/null) ; then
-        echo ""
-        while IFS= read -r file; do
-            echo "${file#./}"
-        done < <(findCMD)
-        echo ""
-    fi
+    while IFS= read -r file; do
+        y="${file%.mkv}.mp4"
+        if [[ ! -e ${y} ]]; then
+            echo ""
+            echo "${file}"
+        else
+            echo ""
+            echo "${file}"
+        fi
+    done < <(findCMDmkv)
+    while IFS= read -r file; do
+        y="${file%.m4v}.mp4"
+        if [[ ! -e ${y} ]]; then
+            echo ""
+            echo "${file}"
+        else
+            echo ""
+            echo "${file}"
+        fi
+    done < <(findCMDm4v)
 }
 
-outputToSubler() {
+outputToSubler_NoWait() {
+    # This bit of scripting runs through AppleScript to Subler
+    # without the waiting and Moving to Trash step
+    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do echo "${f}";
     while IFS= read -r file; do
-        if [[ ! -e ${file%.mkv}.mp4 ]]; then
+        y="${file%.mkv}.mp4"
+        if [[ ! -e ${y} ]]; then
             echo ""
-            echo "$file ${RED}<--THIS ONE${NORMAL}"
+            echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
-                set filePath to (POSIX file \"$file\" as alias)
+                set filePath to (POSIX file \"${file}\" as alias)
                 tell application \"Subler\"
                     add to queue filePath
-                end tell"
-        elif [[ ! -e ${file%.m4v}.mp4 ]]; then
-            echo ""
-            echo "$file ${RED}<--THIS ONE${NORMAL}"
-            osascript -e "
-                set filePath to (POSIX file \"$file\" as alias)
-                tell application \"Subler\"
-                    add to queue filePath
+                    start queue
                 end tell"
         fi
-    done < <(findCMD)
+    done < <(findCMDmkv)
+    unset y
+    while IFS= read -r file; do
+        y="${file%.m4v}.mp4"
+        if [[ ! -e ${y} ]]; then
+            echo ""
+            echo "${file} ${RED}<--THIS ONE${NORMAL}"
+            osascript -e "
+            set filePath to (POSIX file \"${file}\" as alias)
+            tell application \"Subler\"
+                add to queue filePath
+                start queue
+            end tell"
+        fi
+    done < <(findCMDm4v)
+    unset y
+    done
 }
 
-CONFIRM_DEL() {
+outputToSubler_Wait() {
+    # This bit of scripting runs through AppleScript to Subler
+    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do echo "${f}";
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]] &&
-        echo "${RED}Erasing ${file}....${NORMAL}"
-        echo ""
-        rm -f "$file" ;
-    done < <(findCMD)
+        y="${file%.mkv}.mp4"
+        if [[ ! -e ${y} ]]; then
+            echo ""
+            echo "${file} ${RED}<--THIS ONE${NORMAL}"
+            osascript -e "
+                set filePath to (POSIX file \"${file}\" as alias)
+                set TimeOutWait to \"${TIMEOUT_WAIT}\"
+                tell application \"Subler\"
+                    with timeout of TimeOutWait seconds
+                    add to queue filePath
+                    start queue and wait
+                    tell application \"Finder\"
+                        if exists file filePath then
+                            delete file filePath
+                        end if
+                    end tell
+                    end timeout
+                end tell"
+        fi
+    done < <(findCMDmkv)
+    unset y
+    while IFS= read -r file; do
+        y="${file%.m4v}.mp4"
+        if [[ ! -e ${y} ]]; then
+            echo ""
+            echo "${file} ${RED}<--THIS ONE${NORMAL}"
+            osascript -e "
+            set filePath to (POSIX file \"${file}\" as alias)
+            set TimeOutWait to \"${TIMEOUT_WAIT}\"
+            tell application \"Subler\"
+                with timeout of TimeOutWait seconds
+                add to queue filePath
+                start queue and wait
+                tell application \"Finder\"
+                    if exists file filePath then
+                        delete file filePath
+                    end if
+                end timeout
+                end tell
+            end tell"
+        fi
+    done < <(findCMDm4v)
+    unset y
+    done
 }
 
-SHOW_OUTPUT() {
+confirmDel() {
     while IFS= read -r file; do
-        [[ -e ${file%.mkv}.mp4 ]] || [[ -e ${file%.m4v}.mp4 ]]&&
-        echo "
-      ############################################################
-${RED}$file ${NORMAL}
+        y="${file%.mkv}.mp4"
+        if [[ -e ${y} ]]; then
+            echo "${RED}Erasing ${file}....${NORMAL}"
+            echo ""
+            rm -f "${file}" ;
+        fi
+    done < <(findCMDmkv)
+    unset y
+
+    while IFS= read -r file; do
+        y="${file%.m4v}.mp4"
+        if [[ -e ${y} ]]; then
+            echo "${RED}Erasing ${file}....${NORMAL}"
+            echo ""
+            rm -f "${file}" ;
+        fi
+    done < <(findCMDm4v)
+    unset y
+}
+
+ShowOutPut() {
+    while IFS= read -r file; do
+        y="${file%.mkv}.mp4"
+        if [[ ! -e ${y} ]]; then
+
+            cat <<EOF
+###########################################################
+${RED}${file} ${NORMAL}
 ${file%.mkv}.mp4
-      ############################################################"
-    done < <(findCMD)
+###########################################################
+EOF
+
+        fi
+    done < <(findCMDmkv)
+    unset y
+
+    while IFS= read -r file; do
+        y="${file%.m4v}.mp4"
+        if [[ ! -e ${y} ]]; then
+
+            cat <<EOF
+###########################################################
+${RED}${file} ${NORMAL}
+${file%.m4v}.mp4
+###########################################################
+EOF
+
+        fi
+    done < <(findCMDm4v)
+    unset y
 }
 
-kSHOW_OUTPUT() {
-    if [[ $(SHOW_OUTPUT) != "" ]]; then
+# This is the block that goes through and finalizes the removal
+# of the duplicated files, removing the mkv or m4v files.
+kShowOutPut() {
+    if [[ ShowOutPut != "" ]]; then
 cat << EOF
 
 Please, examine the above files to confirm they are ready to be removed.
@@ -171,199 +342,74 @@ Usually....
 
 EOF
         press_enter &&
-        CONFIRM_DEL &&
+        confirmDel &&
         echo "Finished Deleting...."
         echo ""
     fi
 }
 
-trap 'rm $tmp_file; exit 1' SIGHUP SIGINT SIGTERM
-
-if [[ $? == "-h" ]]; then
-    USAGE
-
-# This section is for the `dialog` prompts.
-# It uses the main `cmd` variable, as both prompts are simple and
-# the same size.
-cmd=(dialog --keep-tite --menu "Select options: "  10 30 30)
-# Then, the different menu options have different variable arrays
-mediaOptions=(
-    1 "TV"
-    2 "Movies"
-    3 "Porn"
-    4 "Custom"
-)
-actionOptions=(
-    1 "Subler"
-    2 "Delete_Duplicates"
-    3 "Show all MKV Files"
-)
-# Then, calling the actual dialog and assigning a number to the variable
-# happens here.
-# And it assigns the NUMBER of the selection to the variable.
-choicesAction=$("${cmd[@]}" "${actionOptions[@]}" 2>&1 >/dev/tty)
-choicesMedia=$("${cmd[@]}" "${mediaOptions[@]}" 2>&1 >/dev/tty)
-
-# These blocks were me playing with Apple's Automation stuff.
-appleScriptFunction() {
-    # This first item, the variable, is like the dialog selector from above,
-    # but it outputs the selections NAME into the variable.
-    choices=$(osascript -l JavaScript -e '
-        var app = Application.currentApplication()
-        app.includeStandardAdditions = true
-
-        var locationChoices = ["TV", "Movies", "Porn", "Custom"]
-        var locationList = app.chooseFromList(locationChoices, {
-            withPrompt: "Select options:",
-            defaultItems: ["TV"]
-        })
-        locationList' 2>&1)
-
-    # This is a custom directory selector, for narrowing
-    # the operation of the script.
-    osascriptCustomSelector() {
-        directories="$(osascript -l JavaScript -e '
-            var app = Application.currentApplication()
-            app.includeStandardAdditions = true
-
-            var outputFolder = app.chooseFolder({
-                withPrompt: "Please select a specific Directory to search through:",
-                multipleSelectionsAllowed: true
-            })
-            outputFolder' | cut -d '"' -f2)"
-    }
-}
+trap 'die 1' SIGHUP SIGINT SIGTERM
 
 finalDelete() {
-    for choice in $choicesMedia; do
-        case $choice in
-            1 | TV )
-                for f in $TV_EXT ; do
-                    #cd "$f" || continue;
-                    echo "${PWD}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            2 | Movies )
-                for f in $MOVIES_EXT ; do
-                    #cd "$f" || continue;
-                    echo "${PWD}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            3 | Porn )
-                for f in $PORN_EXT ; do
-                    #cd "$f" || continue;
-                    echo "${PWD}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            4 | Custom )
-                osascriptCustomSelector;
-                myFiles=("$directories"/*)
-                for f in "${myFiles[@]}" ; do
-                    #cd "$f" || continue;
-                    echo "${PWD}";
-                    SHOW_OUTPUT;
-                    kSHOW_OUTPUT;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;
-                unset f myFiles directories;;
-            * )
-                USAGE; HELP_VERSION; exit 1;;
-        esac
-    done
-}
-
-sendToSubler() {
-    for choice2 in $choicesMedia; do
-        case $choice2 in
-            1 | TV )
-                for f in $TV_EXT ; do
-                    cd "$f" || continue;
-                    echo "${PWD}";
-                    outputToSubler;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            2 | Movies )
-                for f in $MOVIES_EXT ; do
-                    cd "$f" || continue;
-                    echo "${PWD}";
-                    outputToSubler;
-                    #cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            3 | Porn )
-                for f in $PORN_EXT ; do
-                    cd "$f" || continue;
-                    echo "${PWD}";
-                    outputToSubler;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            4 | Custom )
-                osascriptCustomSelector;
-                myFiles=("$directories"/*)
-                for f in "${myFiles[@]}" ; do
-                    cd "$f" || continue;
-                    echo "${PWD}";
-                    outputToSubler;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;
-                unset f myFiles directories;;
-            * )
-                USAGE; HELP_VERSION; exit 1;;
-        esac
+    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do
+        echo "${f}";
+        ShowOutPut;
+        kShowOutPut;
     done
 }
 
 showMKVFiles() {
-    for choice3 in $choicesMedia; do
-        case $choice3 in
-            1 | TV )
-                for f in $TV_EXT ; do
-                    cd "$f" || continue;
-                    SHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            2 | Movies )
-                for f in $MOVIES_EXT ; do
-                    cd "$f" || continue;
-                    SHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            3 | Porn )
-                for f in $PORN_EXT ; do
-                    cd "$f" || continue;
-                    SHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;;
-            4 | Custom )
-                osascriptCustomSelector;
-                myFiles=("$directories"/*)
-                for f in "${myFiles[@]}" ; do
-                    cd "$f" || continue;
-                    SHOW_OUTPUT;
-                    cd "$OLDPWD" || ! break;
-                done || ! cd - >&2;
-                unset f myFiles directories;;
-            * )
-                USAGE; HELP_VERSION; exit 1;;
-        esac
+    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do
+        outputMKVFiles;
     done
 }
 
-for choice in $choicesAction; do
-    case $choice in
-        1 )
-            sendToSubler;;
-        2 )
-            finalDelete;;
-        3 )
-            showMKVFiles;;
+# These are declaring our command line flags for getopt lower down
+SHORT=swh
+LONG=send,wait,rm,dup,help
+
+OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
+
+if [ $# == 0 ]; then
+  outputToSubler_NoWait && die 0
+fi
+
+if [ $? != 0 ] ; then
+    die "Failed to parse options...exiting." >&2
+fi
+
+eval set -- "$OPTS"
+
+while true; do
+    case "$1" in
+        -s | --send )
+            outputToSubler_NoWait
+            exit 0
+            ;;
+        -w | --wait )
+            outputToSubler_Wait
+            exit 0
+            ;;
+        --rm )
+            finalDelete
+            exit 0
+            ;;
+        --dup )
+            showMKVFiles
+            exit 0
+            ;;
+        -h | --help )
+            usage
+            exit 0
+            ;;
+        -- )
+            shift
+            break
+            ;;
+        * )
+            outputToSubler_NoWait
+            ;;
     esac
 done
 
-echo ""
 exit 0

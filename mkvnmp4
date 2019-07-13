@@ -83,7 +83,7 @@ fi
 
 if [[ "$(uname)" == "Darwin" ]]; then
     COUNTER=0
-    for f in "${PornDrive}" "${MovieDrive}" "${TVDrive}" "${OtherDrive}"; do
+    for f in "${DRIVES[@]}"; do
         if [ -d "$f" ]; then
             COUNTER=$((COUNTER +1 ))
         fi
@@ -97,22 +97,6 @@ if [[ "$(uname)" == "Darwin" ]]; then
 else
     die "Currently, only meant for macOS."
 fi
-
-if [ $# == -v ]; then
-    TV_EXT="${TVDrive:-OtherDrive}" 2>&1
-    MOVIES_EXT="${MovieDrive:-OtherDrive}" 2>&1
-    PORN_EXT="${PornDrive:-OtherDrive}" 2>&1
-else
-    TV_EXT="${TVDrive:-OtherDrive}"
-    MOVIES_EXT="${MovieDrive:-OtherDrive}"
-    PORN_EXT="${PornDrive:-OtherDrive}"
-fi
-
-DRIVES=(
-    "${TV_EXT}"
-    "${MOVIES_EXT}"
-    "${PORN_EXT}"
-)
 
 TIMEOUT_WAIT="${WAIT_TIMEOUT:-600}"
 

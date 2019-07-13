@@ -108,6 +108,12 @@ else
     PORN_EXT="${PornDrive:-OtherDrive}"
 fi
 
+DRIVES=(
+    "${TV_EXT}"
+    "${MOVIES_EXT}"
+    "${PORN_EXT}"
+)
+
 TIMEOUT_WAIT="${WAIT_TIMEOUT:-600}"
 
 RED=$(tput setaf 1)
@@ -193,7 +199,7 @@ outputMKVFiles() {
 outputToSubler_NoWait() {
     # This bit of scripting runs through AppleScript to Subler
     # without the waiting and Moving to Trash step
-    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do echo "${f}";
+    for f in "${DRIVES[@]}"; do echo "${f}";
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ ! -e ${y} ]]; then
@@ -227,7 +233,7 @@ outputToSubler_NoWait() {
 
 outputToSubler_Wait() {
     # This bit of scripting runs through AppleScript to Subler
-    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do echo "${f}";
+    for f in "${DRIVES[@]}"; do echo "${f}";
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ ! -e ${y} ]]; then
@@ -351,7 +357,7 @@ EOF
 trap 'die 1' SIGHUP SIGINT SIGTERM
 
 finalDelete() {
-    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do
+    for f in "${DRIVES[@]}"; do
         echo "${f}";
         ShowOutPut;
         kShowOutPut;
@@ -359,7 +365,7 @@ finalDelete() {
 }
 
 showMKVFiles() {
-    for f in ${TV_EXT} ${MOVIES_EXT} ${PORN_EXT}; do
+    for f in "${DRIVES[@]}"; do
         outputMKVFiles;
     done
 }

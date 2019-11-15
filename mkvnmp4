@@ -131,8 +131,8 @@ ${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
                   : delete the duplicates.
                   : Much safer than -rm below.
 
-        -rm       : Remove duplicate MKV's that also have mp4
-        -dup      : Show Duplicates
+        --rm       : Remove duplicate MKV's that also have mp4
+        --dup      : Show Duplicates
       -h | --help : This Help
         -v        : Increase the verbosity
 
@@ -188,7 +188,7 @@ function outputToSubler_NoWait() {
     for f in "${DRIVES[@]}"; do echo "${f}";
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ -e ${y} ]]; then
+        if [[ ! -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -202,7 +202,7 @@ function outputToSubler_NoWait() {
     unset y
     while IFS= read -r file; do
         y="${file%.m4v}.mp4"
-        if [[ -e ${y} ]]; then
+        if [[ ! -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -222,7 +222,7 @@ function outputToSubler_Wait() {
     for f in "${DRIVES[@]}"; do echo "${f}";
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ -e ${y} ]]; then
+        if [[ ! -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -244,7 +244,7 @@ function outputToSubler_Wait() {
     unset y
     while IFS= read -r file; do
         y="${file%.m4v}.mp4"
-        if [[ -e ${y} ]]; then
+        if [[ ! -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -292,7 +292,7 @@ function confirmDel() {
 function ShowOutPut() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ -e ${y} ]]; then
+        if [[ ! -e ${y} ]]; then
 
             cat <<EOF
 ###########################################################
@@ -307,7 +307,7 @@ EOF
 
     while IFS= read -r file; do
         y="${file%.m4v}.mp4"
-        if [[ -e ${y} ]]; then
+        if [[ ! -e ${y} ]]; then
 
             cat <<EOF
 ###########################################################

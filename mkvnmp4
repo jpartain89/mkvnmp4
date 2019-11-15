@@ -340,7 +340,7 @@ EOF
     fi
 }
 
-trap 'die 1' SIGHUP SIGINT SIGTERM
+trap 'die "Signal was called, exiting!"' SIGHUP SIGINT SIGTERM
 
 function finalDelete() {
     for f in "${DRIVES[@]}"; do

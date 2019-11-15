@@ -171,9 +171,6 @@ function outputMKVFiles() {
         if [[ -e ${y} ]]; then
             echo ""
             echo "${file}"
-        #else
-        #    echo ""
-        #    echo "${file}"
         fi
     done < <(findCMDmkv)
     while IFS= read -r file; do
@@ -181,9 +178,6 @@ function outputMKVFiles() {
         if [[ -e ${y} ]]; then
             echo ""
             echo "${file}"
-        #else
-        #    echo ""
-        #    echo "${file}"
         fi
     done < <(findCMDm4v)
 }
@@ -194,7 +188,7 @@ function outputToSubler_NoWait() {
     for f in "${DRIVES[@]}"; do echo "${f}";
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ ! -e ${y} ]]; then
+        if [[ -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -208,7 +202,7 @@ function outputToSubler_NoWait() {
     unset y
     while IFS= read -r file; do
         y="${file%.m4v}.mp4"
-        if [[ ! -e ${y} ]]; then
+        if [[ -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -228,7 +222,7 @@ function outputToSubler_Wait() {
     for f in "${DRIVES[@]}"; do echo "${f}";
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ ! -e ${y} ]]; then
+        if [[ -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -250,7 +244,7 @@ function outputToSubler_Wait() {
     unset y
     while IFS= read -r file; do
         y="${file%.m4v}.mp4"
-        if [[ ! -e ${y} ]]; then
+        if [[ -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -298,7 +292,7 @@ function confirmDel() {
 function ShowOutPut() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ ! -e ${y} ]]; then
+        if [[ -e ${y} ]]; then
 
             cat <<EOF
 ###########################################################
@@ -313,7 +307,7 @@ EOF
 
     while IFS= read -r file; do
         y="${file%.m4v}.mp4"
-        if [[ ! -e ${y} ]]; then
+        if [[ -e ${y} ]]; then
 
             cat <<EOF
 ###########################################################

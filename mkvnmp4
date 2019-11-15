@@ -27,7 +27,7 @@ set -e
 # Program information
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
-VERSION="4.5.0"
+VERSION="4.5.1"
 
 function die() {
     echo "${PROGRAM_NAME}: $1" >&2
@@ -57,7 +57,7 @@ elif [ -f ~/.config/mkvnmp4.conf ]; then
     source "${HOME}/.config/mkvnmp4.conf"
 else
     die << EOF
-We couldn't find the mkvnmp4.conf configuration file that we require to run!
+We couldn't find the ${PROGRAM_NAME}.conf configuration file that we require to run!
 The file is looked for at:
 
     /etc/${PROGRAM_NAME}.conf
@@ -171,9 +171,9 @@ function outputMKVFiles() {
         if [[ ! -e ${y} ]]; then
             echo ""
             echo "${file}"
-        else
-            echo ""
-            echo "${file}"
+        #else
+        #    echo ""
+        #    echo "${file}"
         fi
     done < <(findCMDmkv)
     while IFS= read -r file; do
@@ -181,9 +181,9 @@ function outputMKVFiles() {
         if [[ ! -e ${y} ]]; then
             echo ""
             echo "${file}"
-        else
-            echo ""
-            echo "${file}"
+        #else
+        #    echo ""
+        #    echo "${file}"
         fi
     done < <(findCMDm4v)
 }

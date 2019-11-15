@@ -29,7 +29,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
 VERSION="4.5.0"
 
-die() {
+function die() {
     echo "${PROGRAM_NAME}: $1" >&2
     exit "${2:-1}"
 }
@@ -111,13 +111,13 @@ TIMEOUT_WAIT="${WAIT_TIMEOUT:-600}"
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr 0)
 
-press_enter() {
+function press_enter() {
     echo ""
     echo -n "Press Enter to Continue..."
     read -r
 }
 
-usage() {
+function usage() {
 cat << EOF
 ${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
              |--[ --rm ]
@@ -157,15 +157,15 @@ EOF
 # as long to process. But, for now, thats just fine.
 
 # This is the entire find command line for`mkv`
-findCMDmkv() {
+function findCMDmkv() {
     find -s "${f}" -maxdepth 4 -type f -iname "*.mkv"  -exec echo {} \;
 }
 # This is the entire find command line for `m4v`
-findCMDm4v() {
+function findCMDm4v() {
     find -s "${f}" -maxdepth 4 -type f -iname "*.m4v"  -exec echo {} \;
 }
 
-outputMKVFiles() {
+function outputMKVFiles() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ ! -e ${y} ]]; then
@@ -188,7 +188,7 @@ outputMKVFiles() {
     done < <(findCMDm4v)
 }
 
-outputToSubler_NoWait() {
+function outputToSubler_NoWait() {
     # This bit of scripting runs through AppleScript to Subler
     # without the waiting and Moving to Trash step
     for f in "${DRIVES[@]}"; do echo "${f}";
@@ -223,7 +223,7 @@ outputToSubler_NoWait() {
     done
 }
 
-outputToSubler_Wait() {
+function outputToSubler_Wait() {
     # This bit of scripting runs through AppleScript to Subler
     for f in "${DRIVES[@]}"; do echo "${f}";
     while IFS= read -r file; do
@@ -273,7 +273,7 @@ outputToSubler_Wait() {
     done
 }
 
-confirmDel() {
+function confirmDel() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ -e ${y} ]]; then
@@ -295,7 +295,7 @@ confirmDel() {
     unset y
 }
 
-ShowOutPut() {
+function ShowOutPut() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ ! -e ${y} ]]; then
@@ -329,7 +329,7 @@ EOF
 
 # This is the block that goes through and finalizes the removal
 # of the duplicated files, removing the mkv or m4v files.
-kShowOutPut() {
+function kShowOutPut() {
     if [[ ShowOutPut != "" ]]; then
 cat << EOF
 
@@ -348,7 +348,7 @@ EOF
 
 trap 'die 1' SIGHUP SIGINT SIGTERM
 
-finalDelete() {
+function finalDelete() {
     for f in "${DRIVES[@]}"; do
         echo "${f}";
         ShowOutPut;
@@ -356,7 +356,7 @@ finalDelete() {
     done
 }
 
-showMKVFiles() {
+function showMKVFiles() {
     for f in "${DRIVES[@]}"; do
         outputMKVFiles;
     done
@@ -376,7 +376,7 @@ if [ $? != 0 ] ; then
     die "Failed to parse options...exiting." >&2
 fi
 
-eval set -- "$OPTS"
+eval set -- "${OPTS}"
 
 while true; do
     case "$1" in

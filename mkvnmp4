@@ -27,7 +27,7 @@ set -e
 # Program information
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
-VERSION="4.5.0"
+VERSION="4.5.1"
 
 function die() {
     echo "${PROGRAM_NAME}: $1" >&2
@@ -57,7 +57,7 @@ elif [ -f ~/.config/mkvnmp4.conf ]; then
     source "${HOME}/.config/mkvnmp4.conf"
 else
     die << EOF
-We couldn't find the mkvnmp4.conf configuration file that we require to run!
+We couldn't find the ${PROGRAM_NAME}.conf configuration file that we require to run!
 The file is looked for at:
 
     /etc/${PROGRAM_NAME}.conf
@@ -131,8 +131,8 @@ ${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
                   : delete the duplicates.
                   : Much safer than -rm below.
 
-        -rm       : Remove duplicate MKV's that also have mp4
-        -dup      : Show Duplicates
+        --rm       : Remove duplicate MKV's that also have mp4
+        --dup      : Show Duplicates
       -h | --help : This Help
         -v        : Increase the verbosity
 
@@ -168,20 +168,14 @@ function findCMDm4v() {
 function outputMKVFiles() {
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ ! -e ${y} ]]; then
-            echo ""
-            echo "${file}"
-        else
+        if [[ -e ${y} ]]; then
             echo ""
             echo "${file}"
         fi
     done < <(findCMDmkv)
     while IFS= read -r file; do
         y="${file%.m4v}.mp4"
-        if [[ ! -e ${y} ]]; then
-            echo ""
-            echo "${file}"
-        else
+        if [[ -e ${y} ]]; then
             echo ""
             echo "${file}"
         fi
@@ -346,7 +340,7 @@ EOF
     fi
 }
 
-trap 'die 1' SIGHUP SIGINT SIGTERM
+trap 'die "Signal was called, exiting!"' SIGHUP SIGINT SIGTERM
 
 function finalDelete() {
     for f in "${DRIVES[@]}"; do
@@ -369,7 +363,7 @@ LONG=send,wait,rm,dup,help
 OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
 
 if [ $# == 0 ]; then
-  outputToSubler_NoWait && die 0
+  outputToSubler_NoWait && exit 0
 fi
 
 if [ $? != 0 ] ; then

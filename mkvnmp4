@@ -56,8 +56,7 @@ elif [ -f ~/.mkvnmp4.conf ]; then
 elif [ -f ~/.config/mkvnmp4.conf ]; then
     source "${HOME}/.config/mkvnmp4.conf"
 else
-    die << EOF
-We couldn't find the ${PROGRAM_NAME}.conf configuration file that we require to run!
+    die "We couldn't find the ${PROGRAM_NAME}.conf configuration file that we require to run!
 The file is looked for at:
 
     /etc/${PROGRAM_NAME}.conf
@@ -71,7 +70,7 @@ The file is looked for at:
 This repo has a configuration file example that you can key off of for what you need to fill out.
 
 Exiting now.
-EOF
+"
     exit 1
 fi
 

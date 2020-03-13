@@ -2,7 +2,7 @@
 # shellcheck disable=SC1091
 set -e
 
-# Copyright © 2018-2019 JPCDI, JPartain89 and Justin Partain
+# Copyright © 2018-2020 JPCDI, JPartain89 and Justin Partain
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -157,11 +157,13 @@ EOF
 
 # This is the entire find command line for`mkv`
 function findCMDmkv() {
-    find -s "${f}" -maxdepth 4 -type f -iname "*.mkv"  -exec echo {} \;
+    find -s "${f}" -maxdepth 4 -type f \( -iname "*.mkv" -and ! -iname "*recycle*" \) -print0 |
+        while IFS= read -rd '' dir; do echo "$dir"; done
 }
 # This is the entire find command line for `m4v`
 function findCMDm4v() {
-    find -s "${f}" -maxdepth 4 -type f -iname "*.m4v"  -exec echo {} \;
+    find -s "${f}" -maxdepth 4 -type f \( -iname "*.m4v" -and ! -iname "*recycle*" \)  -print0 |
+        while IFS= read -rd '' dir; do echo "$dir"; done
 }
 
 function outputMKVFiles() {
@@ -184,35 +186,37 @@ function outputMKVFiles() {
 function outputToSubler_NoWait() {
     # This bit of scripting runs through AppleScript to Subler
     # without the waiting and Moving to Trash step
-    for f in "${DRIVES[@]}"; do echo "${f}";
-    while IFS= read -r file; do
-        y="${file%.mkv}.mp4"
-        if [[ ! -e ${y} ]]; then
-            echo ""
-            echo "${file} ${RED}<--THIS ONE${NORMAL}"
-            osascript -e "
-                set filePath to (POSIX file \"${file}\" as alias)
-                tell application \"Subler\"
+    for f in "${DRIVES[@]}"; do
+        echo "Running through the ${f} directory"
+        echo "         ######################      "
+        while IFS= read -r file; do
+            y="${file%.mkv}.mp4"
+            if [[ ! -e ${y} ]]; then
+                echo ""
+                echo "${file} ${RED}<--THIS ONE${NORMAL}"
+                osascript -e "
+                    set filePath to (POSIX file \"${file}\" as alias)
+                    tell application \"Subler\"
+                        add to queue filePath
+                        start queue
+                    end tell"
+            fi
+        done < <(findCMDmkv)
+        unset y
+        while IFS= read -r file; do
+            y="${file%.m4v}.mp4"
+            if [[ ! -e ${y} ]]; then
+                echo ""
+                echo "${file} ${RED}<--THIS ONE${NORMAL}"
+                osascript -e "
+                    set filePath to (POSIX file \"${file}\" as alias)
+                    tell application \"Subler\"
                     add to queue filePath
                     start queue
                 end tell"
-        fi
-    done < <(findCMDmkv)
-    unset y
-    while IFS= read -r file; do
-        y="${file%.m4v}.mp4"
-        if [[ ! -e ${y} ]]; then
-            echo ""
-            echo "${file} ${RED}<--THIS ONE${NORMAL}"
-            osascript -e "
-            set filePath to (POSIX file \"${file}\" as alias)
-            tell application \"Subler\"
-                add to queue filePath
-                start queue
-            end tell"
-        fi
-    done < <(findCMDm4v)
-    unset y
+            fi
+        done < <(findCMDm4v)
+        unset y
     done
 }
 
@@ -267,38 +271,57 @@ function outputToSubler_Wait() {
 }
 
 function confirmDel() {
-    while IFS= read -r file; do
-        y="${file%.mkv}.mp4"
-        if [[ -e ${y} ]]; then
-            echo "${RED}Erasing ${file}....${NORMAL}"
+    if [[ "${z}" != "" ]]; then
+        for file in ${z[*]}; do
+            echo "${RED}Erasing ${file}...${NORMAL}"
             echo ""
-            rm -f "${file}" ;
-        fi
-    done < <(findCMDmkv)
-    unset y
+            press_enter &&
+            rm -f "${file}"
+            unset "${z[file]}"
+        done
+        unset z
+    else
+        echo "Nothing was found! Exiting"
+        exit 0
+    fi
 
-    while IFS= read -r file; do
-        y="${file%.m4v}.mp4"
-        if [[ -e ${y} ]]; then
-            echo "${RED}Erasing ${file}....${NORMAL}"
-            echo ""
-            rm -f "${file}" ;
-        fi
-    done < <(findCMDm4v)
-    unset y
+#    while IFS= read -r file; do
+#        y="${file%.mkv}.mp4"
+#        if [[ -e ${y} ]]; then
+#            echo "${RED}Erasing ${file}....${NORMAL}"
+#            echo ""
+#            rm -f "${file}" ;
+#        fi
+#    done < <(findCMDmkv)
+#    unset y
+#
+#    while IFS= read -r file; do
+#        y="${file%.m4v}.mp4"
+#        if [[ -e ${y} ]]; then
+#            echo "${RED}Erasing ${file}....${NORMAL}"
+#            echo ""
+#            rm -f "${file}" ;
+#        fi
+#    done < <(findCMDm4v)
+#    unset y
 }
 
 function ShowOutPut() {
+    z=()
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
-        if [[ ! -e ${y} ]]; then
+        if [[ -e ${y} ]]; then
 
             cat <<EOF
 ###########################################################
+${RED}The RED LINE is the one being deleted!!${NORMAL}
 ${RED}${file} ${NORMAL}
+
+This is the safe line!
 ${file%.mkv}.mp4
 ###########################################################
 EOF
+        z+=("${file}")
 
         fi
     done < <(findCMDmkv)
@@ -306,7 +329,7 @@ EOF
 
     while IFS= read -r file; do
         y="${file%.m4v}.mp4"
-        if [[ ! -e ${y} ]]; then
+        if [[ -e ${y} ]]; then
 
             cat <<EOF
 ###########################################################
@@ -318,12 +341,19 @@ EOF
         fi
     done < <(findCMDm4v)
     unset y
+    export z="${z[@]}"
 }
 
 # This is the block that goes through and finalizes the removal
 # of the duplicated files, removing the mkv or m4v files.
 function kShowOutPut() {
     if [[ ShowOutPut != "" ]]; then
+IFS=
+for i in "${z[@]}"; do
+    echo "${RED}Deleting ${i}${NORMAL}"
+    echo ""
+done
+
 cat << EOF
 
 Please, examine the above files to confirm they are ready to be removed.
@@ -362,7 +392,7 @@ LONG=send,wait,rm,dup,help
 OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
 
 if [ $# == 0 ]; then
-  outputToSubler_NoWait && exit 0
+    outputToSubler_NoWait && exit 0
 fi
 
 if [ $? != 0 ] ; then

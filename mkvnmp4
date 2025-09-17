@@ -54,8 +54,9 @@ HELP
 			SKIP_DRIVE_CHECK=1
 			;;
 		-d|--dup)
-			# duplicates listing should not require drives to be mounted; allow skipping the strict check
+			# duplicates listing should not require drives to be mounted; enable dry-run and skip strict check
 			SKIP_DRIVE_CHECK=1
+			DRY_RUN=true
 			;;
 	esac
 done
@@ -597,6 +598,8 @@ while true; do
 		exit 0
 		;;
 	-d | --dup)
+		# ensure duplicate listing is non-destructive
+		DRY_RUN=true
 		showMKVFiles
 		exit 0
 		;;

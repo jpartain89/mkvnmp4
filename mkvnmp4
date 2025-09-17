@@ -49,6 +49,14 @@ Options:
 HELP
 			exit 0
 			;;
+		-n|--dry-run)
+			# when running in dry-run mode early, it's OK if drives aren't mounted
+			SKIP_DRIVE_CHECK=1
+			;;
+		-d|--dup)
+			# duplicates listing should not require drives to be mounted; allow skipping the strict check
+			SKIP_DRIVE_CHECK=1
+			;;
 	esac
 done
 
@@ -156,18 +164,21 @@ fi
 # This block is meant to stop usage on Linux Machines, as I've only tested
 # this script on macOS
 if [[ "$(uname)" == "Darwin" ]]; then
-	COUNTER=0
-	for f in "${DRIVES[@]}"; do
-		if [ -d "$f" ]; then
-			COUNTER=$((COUNTER + 1))
+	# If SKIP_DRIVE_CHECK is set (for --dup or --dry-run), avoid failing when drives aren't mounted.
+	if [ -z "${SKIP_DRIVE_CHECK:-}" ]; then
+		COUNTER=0
+		for f in "${DRIVES[@]}"; do
+			if [ -d "$f" ]; then
+				COUNTER=$((COUNTER + 1))
+			fi
+		done
+		if [ "${COUNTER}" -eq 0 ]; then
+			die "Your configured drives are not present. You need to get the drives mounted before we can continue."
 		fi
-	done
-	if [ "${COUNTER}" -eq 0 ]; then
-		die "Your configured drives are not present. You need to get the drives mounted before we can continue."
+		# don't unset variables that might not be set elsewhere
+		unset -v f || true
+		unset -v COUNTER || true
 	fi
-	# don't unset variables that might not be set elsewhere
-	unset -v f || true
-	unset -v COUNTER || true
 else
 	die "Currently, only meant for macOS."
 fi
@@ -253,12 +264,20 @@ EOF
 # This is the entire find command line for`mkv`
 function findCMDmkv() {
 	local dir
+	# If the configured drive path isn't present, return with no output instead of running find
+	if [ ! -d "${f}" ]; then
+		return 0
+	fi
 	find -s "${f}" -maxdepth 4 -type f \( -iname "*.mkv" -and ! -iname "*recycle*" \) -print0 |
 		while IFS= read -rd '' dir; do echo "$dir"; done
 }
 # This is the entire find command line for `m4v`
 function findCMDm4v() {
 	local dir
+	# If the configured drive path isn't present, return with no output instead of running find
+	if [ ! -d "${f}" ]; then
+		return 0
+	fi
 	find -s "${f}" -maxdepth 4 -type f \( -iname "*.m4v" -and ! -iname "*recycle*" \) -print0 |
 		while IFS= read -rd '' dir; do echo "$dir"; done
 }

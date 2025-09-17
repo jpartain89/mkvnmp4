@@ -1,6 +1,12 @@
 name: Tests
 
-on: [push, pull_request]
+on:
+  schedule:
+    - cron: '45 5 * * *'
+  push:
+    branches: [ "main" ]
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
 
 jobs:
   python-tests:

@@ -14,12 +14,13 @@ teardown() {
 }
 
 @test "help prints usage" {
-  run ./mkvnmp4 --help
+  # call the script from the repository root regardless of cwd in the runner
+  run "$BATS_TEST_DIRNAME/../mkvnmp4" --help
   [ "$status" -eq 0 ]
   [[ "$output" =~ "Usage" || "$output" =~ "--send" || "$output" =~ "--rm" ]]
 }
 
 @test "dup runs (non-destructive)" {
-  run ./mkvnmp4 --dup
+  run "$BATS_TEST_DIRNAME/../mkvnmp4" --dup
   [ "$status" -eq 0 ]
 }

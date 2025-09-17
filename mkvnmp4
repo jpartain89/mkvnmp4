@@ -284,7 +284,30 @@ function findCMDm4v() {
 }
 
 function outputMKVFiles() {
-	local file y
+	local file y drive prev_f
+	# allow optional drive argument; default to global f
+	drive="${1:-${f:-}}"
+
+	# If drive not set, nothing to do
+	if [ -z "${drive}" ]; then
+		warn "No drive specified for outputMKVFiles; skipping"
+		return 0
+	fi
+
+	# if SKIP_DRIVE_CHECK is not set, ensure the drive exists
+	if [ -z "${SKIP_DRIVE_CHECK:-}" ] && [ ! -d "${drive}" ]; then
+		warn "Drive ${drive} not present; skipping"
+		return 0
+	fi
+
+	if [ "${DRY_RUN}" = true ]; then
+		info "DRY-RUN: listing duplicates on ${drive}"
+	fi
+
+	# ensure findCMD* sees the intended drive in the global 'f' variable
+	prev_f="${f:-}"
+	f="${drive}"
+
 	while IFS= read -r file; do
 		y="${file%.mkv}.mp4"
 		if [[ -e ${y} ]]; then
@@ -292,6 +315,7 @@ function outputMKVFiles() {
 			echo "${file}"
 		fi
 	done < <(findCMDmkv)
+
 	while IFS= read -r file; do
 		y="${file%.m4v}.mp4"
 		if [[ -e ${y} ]]; then
@@ -299,6 +323,13 @@ function outputMKVFiles() {
 			echo "${file}"
 		fi
 	done < <(findCMDm4v)
+
+	# restore previous f value
+	if [ -n "${prev_f}" ]; then
+		f="${prev_f}"
+	else
+		unset -v f || true
+	fi
 }
 
 function outputToSubler_NoWait() {
@@ -551,7 +582,12 @@ function finalDelete() {
 
 function showMKVFiles() {
 	for f in "${DRIVES[@]}"; do
-		outputMKVFiles
+		# if SKIP_DRIVE_CHECK not set and drive missing, warn and skip
+		if [ -z "${SKIP_DRIVE_CHECK:-}" ] && [ ! -d "${f}" ]; then
+			warn "Drive ${f} not present; skipping"
+			continue
+		fi
+		outputMKVFiles "${f}"
 	done
 }
 

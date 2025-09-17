@@ -25,87 +25,151 @@ set -euo pipefail
 ###  of the directory....)
 
 # Program information
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROGRAM_NAME="mkvnmp4"
-VERSION="4.5.1"
+
+# Early argument handling: allow printing help without loading config or requiring getopt
+for __arg in "$@"; do
+	case "${__arg}" in
+		-h|--help)
+			cat <<'HELP'
+Usage: mkvnmp4 [--send | --wait] [--dry-run] [--yes] [--verbose] [--dup] [--rm]
+
+Run mkv -> mp4 helper actions (enqueue to Subler, list duplicates, remove duplicates).
+
+Options:
+  -h, --help    Show this brief help and exit
+  -s, --send    Send files to Subler
+  -w, --wait    Send and wait (then remove originals)
+  -n, --dry-run Show actions only
+  -y, --yes     Assume yes for prompts
+  -v, --verbose Increase verbosity
+  -d, --dup     Show duplicates
+  --rm          Remove duplicates
+HELP
+			exit 0
+			;;
+	esac
+done
 
 function die() {
-    echo "${PROGRAM_NAME}: $1" >&2
-    exit "${2:-1}"
+	echo "${PROGRAM_NAME}: $1" >&2
+	exit "${2:-1}"
 }
 
 command -v "${PROGRAM_NAME}" 1>/dev/null 2>&1 || {
-    (
-        if [ -x "${DIR}/${PROGRAM_NAME}" ]; then
-            sudo ln -svf "${DIR}/${PROGRAM_NAME}" "/usr/local/bin/${PROGRAM_NAME}"
-            sudo chmod -R 0775 "/usr/local/bin/${PROGRAM_NAME}"
-        else
-            die "For some reason, linking ${PROGRAM_NAME} to /usr/local/bin,
+	(
+		if [ -x "${DIR}/${PROGRAM_NAME}" ]; then
+			sudo ln -svf "${DIR}/${PROGRAM_NAME}" "/usr/local/bin/${PROGRAM_NAME}"
+			sudo chmod -R 0775 "/usr/local/bin/${PROGRAM_NAME}"
+		else
+			die "For some reason, linking ${PROGRAM_NAME} to /usr/local/bin,
             failed. My apologies for not being able to figure it out..."
-        fi
-    )
+		fi
+	)
 }
 
-# This block is to "source" the configuration file.
-if [ -f /etc/mkvnmp4.conf ]; then
-    source /etc/mkvnmp4.conf
-elif [ -f  /etc/mkvnmp4/mkvnmp4.conf ]; then
-    source /etc/mkvnmp4/mkvnmp4.conf
-elif [ -f ~/.mkvnmp4.conf ]; then
-    source "${HOME}/.mkvnmp4.conf"
-elif [ -f ~/.config/mkvnmp4.conf ]; then
-    source "${HOME}/.config/mkvnmp4.conf"
-else
-    die "We couldn't find the ${PROGRAM_NAME}.conf configuration file that we require to run!
+## Configuration loading: support two styles of config files:
+## 1) a shell-style file that defines DRIVES=(/path ...)
+## 2) a plain text file with one path per line (comments starting with # allowed)
+
+CONFIG_CANDIDATES=(/etc/mkvnmp4.conf /etc/mkvnmp4/mkvnmp4.conf "${HOME}/.mkvnmp4.conf" "${HOME}/.config/mkvnmp4.conf")
+CONFIG_FOUND=
+for cfg in "${CONFIG_CANDIDATES[@]}"; do
+	if [ -f "${cfg}" ]; then
+		# If the file looks like a shell config declaring DRIVES, source it.
+		if grep -qE '^[[:space:]]*DRIVES[[:space:]]*=' "${cfg}" 2>/dev/null; then
+			# shellcheck source=/dev/null
+			source "${cfg}"
+		else
+			# Treat as a simple list of paths (one per line); ignore blank lines and comments
+			DRIVES=()
+			while IFS= read -r line || [ -n "$line" ]; do
+				# trim leading/trailing whitespace
+				line="${line#"${line%%[![:space:]]*}"}"
+				line="${line%%"${line##*[![:space:]]}"}"
+				[ -z "${line}" ] && continue
+				case "${line}" in
+					\#*) continue ;; # comment
+				esac
+				DRIVES+=("${line}")
+			done < "${cfg}"
+		fi
+		CONFIG_FOUND=1
+		break
+	fi
+done
+
+if [ -z "${CONFIG_FOUND:-}" ]; then
+	die "We couldn't find the ${PROGRAM_NAME}.conf configuration file that we require to run!
 The file is looked for at:
 
-    /etc/${PROGRAM_NAME}.conf
-            - or -
-    /etc/${PROGRAM_NAME}/${PROGRAM_NAME}.conf
-            - or -
-    ~/.${PROGRAM_NAME}.conf
-            - or -
-    ~/.config/${PROGRAM_NAME}.conf
+	/etc/${PROGRAM_NAME}.conf
+			- or -
+	/etc/${PROGRAM_NAME}/${PROGRAM_NAME}.conf
+			- or -
+	~/.${PROGRAM_NAME}.conf
+			- or -
+	~/.config/${PROGRAM_NAME}.conf
 
 This repo has a configuration file example that you can key off of for what you need to fill out.
 
 Exiting now.
 "
-    exit 1
+	# shellcheck disable=SC2317
+	exit 1
 fi
 
 # Ensure required config variables are present
 if [ -z "${DRIVES+x}" ]; then
-    die "Configuration error: DRIVES is not set in the configuration file. Please define DRIVES as an array, e.g. DRIVES=(/media/movies)"
+	die "Configuration error: DRIVES is not set in the configuration file. Please define DRIVES as an array, e.g. DRIVES=(/media/movies)"
 fi
 
-# This tests for gnu-getopt, as that's needed to run
-if [ -x /usr/local/opt/gnu-getopt/bin/getopt ]; then
-    GETOPT="/usr/local/opt/gnu-getopt/bin/getopt"
-    # --test returns success on a compatible gnu-getopt; check its exit status
-    if ! "$GETOPT" --test >/dev/null 2>&1 ; then
-        die "You seem to have the wrong version of gnu-getopt. Please investigate and have the proper one installed."
-    fi
+## getopt detection: prefer gnu-getopt from Homebrew, fall back to system getopt if available.
+GETOPT_CANDIDATES=(/usr/local/opt/gnu-getopt/bin/getopt /opt/homebrew/opt/gnu-getopt/bin/getopt /usr/bin/getopt)
+GETOPT=
+for g in "${GETOPT_CANDIDATES[@]}"; do
+	if [ -x "${g}" ]; then
+		GETOPT="${g}"
+		break
+	fi
+done
+
+if [ -n "${GETOPT}" ]; then
+	# If it's gnu-getopt it will support --test; ignore failure for non-gnu implementations
+	if ! "${GETOPT}" --test >/dev/null 2>&1; then
+		# Non-gnu getopt or failing --test: warn only unless tests require strict GNU getopt
+		if [ "${REQUIRE_GNU_GETOPT:-false}" = "true" ]; then
+			die "You seem to have the wrong version of gnu-getopt. Please install a compatible gnu-getopt."
+		else
+			warn "Non-GNU getopt detected; proceeding but some advanced CLI parsing may not work."
+		fi
+	fi
 else
-    die "Seems you're missing the required gnu-getopt program. Please install using 'brew install gnu-getopt'."
+	if [ "${REQUIRE_GNU_GETOPT:-false}" = "true" ]; then
+		die "Seems you're missing the required gnu-getopt program. Please install using 'brew install gnu-getopt'."
+	else
+		warn "No getopt binary found; proceeding but CLI parsing may be degraded in this environment."
+	fi
 fi
 
 # This block is meant to stop usage on Linux Machines, as I've only tested
 # this script on macOS
 if [[ "$(uname)" == "Darwin" ]]; then
-    COUNTER=0
-    for f in "${DRIVES[@]}"; do
-        if [ -d "$f" ]; then
-            COUNTER=$((COUNTER + 1))
-        fi
-    done
-    if [ "${COUNTER}" -eq 0 ]; then
-        die "Your configured drives are not present. You need to get the drives mounted before we can continue."
-    fi
-    unset f
-    unset COUNTER
+	COUNTER=0
+	for f in "${DRIVES[@]}"; do
+		if [ -d "$f" ]; then
+			COUNTER=$((COUNTER + 1))
+		fi
+	done
+	if [ "${COUNTER}" -eq 0 ]; then
+		die "Your configured drives are not present. You need to get the drives mounted before we can continue."
+	fi
+	# don't unset variables that might not be set elsewhere
+	unset -v f || true
+	unset -v COUNTER || true
 else
-    die "Currently, only meant for macOS."
+	die "Currently, only meant for macOS."
 fi
 
 TIMEOUT_WAIT="${WAIT_TIMEOUT:-600}"
@@ -119,32 +183,32 @@ AUTO_YES=false
 VERBOSE=0
 
 function logv() {
-    # verbose logging
-    if [ "${VERBOSE}" -gt 0 ]; then
-        printf '%s\n' "$*"
-    fi
+	# verbose logging
+	if [ "${VERBOSE}" -gt 0 ]; then
+		printf '%s\n' "$*"
+	fi
 }
 
 function info() {
-    printf '%s\n' "$*"
+	printf '%s\n' "$*"
 }
 
 function warn() {
-    printf '%s\n' "$*" >&2
+	printf '%s\n' "$*" >&2
 }
 
 function press_enter() {
-    echo ""
-    if [ "${AUTO_YES}" = true ]; then
-        logv "Auto-confirm enabled; continuing."
-        return 0
-    fi
-    echo -n "Press Enter to Continue..."
-    read -r
+	echo ""
+	if [ "${AUTO_YES}" = true ]; then
+		logv "Auto-confirm enabled; continuing."
+		return 0
+	fi
+	echo -n "Press Enter to Continue..."
+	read -r
 }
 
 function usage() {
-cat << EOF
+	cat <<EOF
 ${PROGRAM_NAME} [ -s | --send ] | [ -w | --wait ]
             [ -n | --dry-run ]
             [ -y | --yes ]
@@ -188,83 +252,83 @@ EOF
 
 # This is the entire find command line for`mkv`
 function findCMDmkv() {
-    local dir
-    find -s "${f}" -maxdepth 4 -type f \( -iname "*.mkv" -and ! -iname "*recycle*" \) -print0 |
-        while IFS= read -rd '' dir; do echo "$dir"; done
+	local dir
+	find -s "${f}" -maxdepth 4 -type f \( -iname "*.mkv" -and ! -iname "*recycle*" \) -print0 |
+		while IFS= read -rd '' dir; do echo "$dir"; done
 }
 # This is the entire find command line for `m4v`
 function findCMDm4v() {
-    local dir
-    find -s "${f}" -maxdepth 4 -type f \( -iname "*.m4v" -and ! -iname "*recycle*" \)  -print0 |
-        while IFS= read -rd '' dir; do echo "$dir"; done
+	local dir
+	find -s "${f}" -maxdepth 4 -type f \( -iname "*.m4v" -and ! -iname "*recycle*" \) -print0 |
+		while IFS= read -rd '' dir; do echo "$dir"; done
 }
 
 function outputMKVFiles() {
-    local file y
-    while IFS= read -r file; do
-        y="${file%.mkv}.mp4"
-        if [[ -e ${y} ]]; then
-            echo ""
-            echo "${file}"
-        fi
-    done < <(findCMDmkv)
-    while IFS= read -r file; do
-        y="${file%.m4v}.mp4"
-        if [[ -e ${y} ]]; then
-            echo ""
-            echo "${file}"
-        fi
-    done < <(findCMDm4v)
+	local file y
+	while IFS= read -r file; do
+		y="${file%.mkv}.mp4"
+		if [[ -e ${y} ]]; then
+			echo ""
+			echo "${file}"
+		fi
+	done < <(findCMDmkv)
+	while IFS= read -r file; do
+		y="${file%.m4v}.mp4"
+		if [[ -e ${y} ]]; then
+			echo ""
+			echo "${file}"
+		fi
+	done < <(findCMDm4v)
 }
 
 function outputToSubler_NoWait() {
-    # This bit of scripting runs through AppleScript to Subler
-    # without the waiting and Moving to Trash step
-    local file y f
-    for f in "${DRIVES[@]}"; do
-        echo "Running through the ${f} directory"
-        echo "         ######################      "
-        # collect files for this drive into a batch
-        batch=()
-        while IFS= read -r file; do
-            y="${file%.mkv}.mp4"
-            if [[ ! -e ${y} ]]; then
-                echo ""
-                echo "${file} ${RED}<--THIS ONE${NORMAL}"
-                batch+=("${file}")
-            fi
-        done < <(findCMDmkv)
-        unset y
+	# This bit of scripting runs through AppleScript to Subler
+	# without the waiting and Moving to Trash step
+	local file y f
+	for f in "${DRIVES[@]}"; do
+		printf 'Running through %s\n' "${f}"
+		printf '         ######################      \n'
+		# collect files for this drive into a batch
+		batch=()
+		while IFS= read -r file; do
+			y="${file%.mkv}.mp4"
+			if [[ ! -e ${y} ]]; then
+				echo ""
+				echo "${file} ${RED}<--THIS ONE${NORMAL}"
+				batch+=("${file}")
+			fi
+		done < <(findCMDmkv)
+		unset y
 
-        while IFS= read -r file; do
-            y="${file%.m4v}.mp4"
-            if [[ ! -e ${y} ]]; then
-                echo ""
-                echo "${file} ${RED}<--THIS ONE${NORMAL}"
-                batch+=("${file}")
-            fi
-        done < <(findCMDm4v)
-        unset y
+		while IFS= read -r file; do
+			y="${file%.m4v}.mp4"
+			if [[ ! -e ${y} ]]; then
+				echo ""
+				echo "${file} ${RED}<--THIS ONE${NORMAL}"
+				batch+=("${file}")
+			fi
+		done < <(findCMDm4v)
+		unset y
 
-        if [ ${#batch[@]} -gt 0 ]; then
-            if [ "${DRY_RUN}" = true ]; then
-                info "DRY-RUN: would enqueue ${#batch[@]} files to Subler for drive ${f}"
-            else
-                # Write an AppleScript that enqueues all files in the batch and starts the queue once.
-                tmp_as=$(mktemp "/tmp/${PROGRAM_NAME}_as.XXXXXX")
-                printf 'set files to {' >"${tmp_as}"
-                first=true
-                for bf in "${batch[@]}"; do
-                    esc=${bf//\"/\\\"}
-                    if [ "${first}" = true ]; then
-                        printf 'POSIX file "%s"' "${esc}" >>"${tmp_as}"
-                        first=false
-                    else
-                        printf ', POSIX file "%s"' "${esc}" >>"${tmp_as}"
-                    fi
-                done
-                printf '}\n' >>"${tmp_as}"
-                cat >>"${tmp_as}" <<'AS'
+		if [ "${#batch[@]}" -gt 0 ]; then
+			if [ "${DRY_RUN}" = true ]; then
+				info "DRY-RUN: would enqueue ${#batch[@]} files to Subler for drive ${f}"
+			else
+				# Write an AppleScript that enqueues all files in the batch and starts the queue once.
+				tmp_as=$(mktemp "/tmp/${PROGRAM_NAME}_as.XXXXXX")
+				printf 'set files to {' >"${tmp_as}"
+				first=true
+				for bf in "${batch[@]}"; do
+					esc=${bf//\"/\\\"}
+					if [ "${first}" = true ]; then
+						printf 'POSIX file "%s"' "${esc}" >>"${tmp_as}"
+						first=false
+					else
+						printf ', POSIX file "%s"' "${esc}" >>"${tmp_as}"
+					fi
+				done
+				printf '}\n' >>"${tmp_as}"
+				cat >>"${tmp_as}" <<'AS'
 tell application "Subler"
   repeat with f in files
     add to queue f
@@ -272,39 +336,39 @@ tell application "Subler"
   start queue
 end tell
 AS
-                # Run the AppleScript
-                if ! osascript "${tmp_as}"; then
-                    warn "Batch AppleScript failed for drive ${f}; falling back to per-file enqueues"
-                    for bf in "${batch[@]}"; do
-                        osascript -e "
+				# Run the AppleScript
+				if ! osascript "${tmp_as}"; then
+					warn "Batch AppleScript failed for drive ${f}; falling back to per-file enqueues"
+					for bf in "${batch[@]}"; do
+						osascript -e "
                             set filePath to (POSIX file \"${bf}\" as alias)
                             tell application \"Subler\"
                             add to queue filePath
                             start queue
                         end tell"
-                    done
-                fi
-                rm -f -- "${tmp_as}"
-            fi
-        fi
-        unset batch
-    done
+					done
+				fi
+				rm -f -- "${tmp_as}"
+			fi
+		fi
+		unset batch
+	done
 }
 
 function outputToSubler_Wait() {
-    # This bit of scripting runs through AppleScript to Subler
-    local file y f
-    for f in "${DRIVES[@]}"; do
-        echo "${f}"
-        while IFS= read -r file; do
-            y="${file%.mkv}.mp4"
-            if [[ ! -e ${y} ]]; then
-            echo ""
-            echo "${file} ${RED}<--THIS ONE${NORMAL}"
-            if [ "${DRY_RUN}" = true ]; then
-                info "DRY-RUN: would enqueue and wait for ${file} and then delete original"
-            else
-                osascript -e "
+	# This bit of scripting runs through AppleScript to Subler
+	local file y f
+	for f in "${DRIVES[@]}"; do
+		echo "${f}"
+		while IFS= read -r file; do
+			y="${file%.mkv}.mp4"
+			if [[ ! -e ${y} ]]; then
+				echo ""
+				echo "${file} ${RED}<--THIS ONE${NORMAL}"
+				if [ "${DRY_RUN}" = true ]; then
+					info "DRY-RUN: would enqueue and wait for ${file} and then delete original"
+				else
+					osascript -e "
                     set filePath to (POSIX file \"${file}\" as alias)
                     set TimeOutWait to \"${TIMEOUT_WAIT}\"
                     tell application \"Subler\"
@@ -318,16 +382,16 @@ function outputToSubler_Wait() {
                         end tell
                         end timeout
                     end tell"
-            fi
-        fi
-        done < <(findCMDmkv)
-    unset y
-        while IFS= read -r file; do
-            y="${file%.m4v}.mp4"
-            if [[ ! -e ${y} ]]; then
-            echo ""
-            echo "${file} ${RED}<--THIS ONE${NORMAL}"
-            osascript -e "
+				fi
+			fi
+		done < <(findCMDmkv)
+		unset y
+		while IFS= read -r file; do
+			y="${file%.m4v}.mp4"
+			if [[ ! -e ${y} ]]; then
+				echo ""
+				echo "${file} ${RED}<--THIS ONE${NORMAL}"
+				osascript -e "
             set filePath to (POSIX file \"${file}\" as alias)
             set TimeOutWait to \"${TIMEOUT_WAIT}\"
             tell application \"Subler\"
@@ -341,63 +405,63 @@ function outputToSubler_Wait() {
                 end timeout
                 end tell
             end tell"
-        fi
-        done < <(findCMDm4v)
-        unset y
-    done
+			fi
+		done < <(findCMDm4v)
+		unset y
+	done
 }
 
 function confirmDel() {
-    if [[ ${#z[@]} -gt 0 ]]; then
-        if [ "${DRY_RUN}" = true ]; then
-            info "DRY-RUN: would erase ${#z[@]} files"
-            for file in "${z[@]}"; do
-                printf '%s\n' "${RED}Would erase: ${file}${NORMAL}"
-            done
-            unset z
-            return 0
-        fi
+	if [[ ${#z[@]} -gt 0 ]]; then
+		if [ "${DRY_RUN}" = true ]; then
+			info "DRY-RUN: would erase ${#z[@]} files"
+			for file in "${z[@]}"; do
+				printf '%s\n' "${RED}Would erase: ${file}${NORMAL}"
+			done
+			unset z
+			return 0
+		fi
 
-        for file in "${z[@]}"; do
-            echo "${RED}Erasing ${file}...${NORMAL}"
-            echo ""
-            press_enter
-            rm -f -- "${file}"
-        done
-        unset z
-    else
-        echo "Nothing was found! Exiting"
-        exit 0
-    fi
+		for file in "${z[@]}"; do
+			echo "${RED}Erasing ${file}...${NORMAL}"
+			echo ""
+			press_enter
+			rm -f -- "${file}"
+		done
+		unset z
+	else
+		echo "Nothing was found! Exiting"
+		exit 0
+	fi
 
-#    while IFS= read -r file; do
-#        y="${file%.mkv}.mp4"
-#        if [[ -e ${y} ]]; then
-#            echo "${RED}Erasing ${file}....${NORMAL}"
-#            echo ""
-#            rm -f "${file}" ;
-#        fi
-#    done < <(findCMDmkv)
-#    unset y
-#
-#    while IFS= read -r file; do
-#        y="${file%.m4v}.mp4"
-#        if [[ -e ${y} ]]; then
-#            echo "${RED}Erasing ${file}....${NORMAL}"
-#            echo ""
-#            rm -f "${file}" ;
-#        fi
-#    done < <(findCMDm4v)
-#    unset y
+	#    while IFS= read -r file; do
+	#        y="${file%.mkv}.mp4"
+	#        if [[ -e ${y} ]]; then
+	#            echo "${RED}Erasing ${file}....${NORMAL}"
+	#            echo ""
+	#            rm -f "${file}" ;
+	#        fi
+	#    done < <(findCMDmkv)
+	#    unset y
+	#
+	#    while IFS= read -r file; do
+	#        y="${file%.m4v}.mp4"
+	#        if [[ -e ${y} ]]; then
+	#            echo "${RED}Erasing ${file}....${NORMAL}"
+	#            echo ""
+	#            rm -f "${file}" ;
+	#        fi
+	#    done < <(findCMDm4v)
+	#    unset y
 }
 
 function ShowOutPut() {
-    z=()
-    while IFS= read -r file; do
-        y="${file%.mkv}.mp4"
-        if [[ -e ${y} ]]; then
+	z=()
+	while IFS= read -r file; do
+		y="${file%.mkv}.mp4"
+		if [[ -e ${y} ]]; then
 
-            cat <<EOF
+			cat <<EOF
 ###########################################################
 ${RED}The RED LINE is the one being deleted!!${NORMAL}
 ${RED}${file} ${NORMAL}
@@ -406,39 +470,39 @@ This is the safe line!
 ${file%.mkv}.mp4
 ###########################################################
 EOF
-    z+=("${file}")
+			z+=("${file}")
 
-        fi
-    done < <(findCMDmkv)
-    unset y
+		fi
+	done < <(findCMDmkv)
+	unset y
 
-    while IFS= read -r file; do
-        y="${file%.m4v}.mp4"
-        if [[ -e ${y} ]]; then
+	while IFS= read -r file; do
+		y="${file%.m4v}.mp4"
+		if [[ -e ${y} ]]; then
 
-            cat <<EOF
+			cat <<EOF
 ###########################################################
 ${RED}${file} ${NORMAL}
 ${file%.m4v}.mp4
 ###########################################################
 EOF
 
-        fi
-    done < <(findCMDm4v)
-    unset y
-    # keep z as an array for downstream usage
+		fi
+	done < <(findCMDm4v)
+	unset y
+	# keep z as an array for downstream usage
 }
 
 # This is the block that goes through and finalizes the removal
 # of the duplicated files, removing the mkv or m4v files.
 function kShowOutPut() {
-    if [[ ${#z[@]} -gt 0 ]]; then
-        for i in "${z[@]}"; do
-            echo "${RED}Deleting ${i}${NORMAL}"
-            echo ""
-        done
+	if [[ ${#z[@]} -gt 0 ]]; then
+		for i in "${z[@]}"; do
+			echo "${RED}Deleting ${i}${NORMAL}"
+			echo ""
+		done
 
-        cat << EOF
+		cat <<EOF
 
 Please, examine the above files to confirm they are ready to be removed.
 
@@ -446,89 +510,89 @@ The next step is ${RED}"nuclear"${NORMAL}, as there is no going back after files
 Usually....
 
 EOF
-        press_enter
-        confirmDel
-        echo "Finished Deleting...."
-        echo ""
-    else
-        echo "No files queued for deletion."
-    fi
+		press_enter
+		confirmDel
+		echo "Finished Deleting...."
+		echo ""
+	else
+		echo "No files queued for deletion."
+	fi
 }
 
 trap 'die "Signal was called, exiting!"' SIGHUP SIGINT SIGTERM
 
 function finalDelete() {
-    for f in "${DRIVES[@]}"; do
-        echo "${f}";
-        ShowOutPut;
-        kShowOutPut;
-    done
+	for f in "${DRIVES[@]}"; do
+		echo "${f}"
+		ShowOutPut
+		kShowOutPut
+	done
 }
 
 function showMKVFiles() {
-    for f in "${DRIVES[@]}"; do
-        outputMKVFiles;
-    done
+	for f in "${DRIVES[@]}"; do
+		outputMKVFiles
+	done
 }
 
 # These are declaring our command line flags for getopt lower down
-#SHORT=swhnyv
-#LONG=send,wait,rm,dup,help,dry-run,yes,verbose
+SHORT=swhnyv
+LONG=send,wait,rm,dup,help,dry-run,yes,verbose
 
-#OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
+OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
 
-if [ $# == 0 ]; then
-    outputToSubler_NoWait && exit 0
-fi
+#if [ "${OPTS}" == 0 ]; then
+#    outputToSubler_NoWait && exit 0
+#fi
 
-if [ $? != 0 ] ; then
-    die "Failed to parse options...exiting." >&2
-fi
+#if [ $? != 0 ] ; then
+#    die "Failed to parse options...exiting." >&2
+#fi
 
-#eval set -- "${OPTS}"
+eval set -- "${OPTS}"
 
 while true; do
-    case "$1" in
-        -s | --send )
-            outputToSubler_NoWait
-            exit 0
-            ;;
-        -n | --dry-run )
-            DRY_RUN=true
-            shift
-            ;;
-        -y | --yes )
-            AUTO_YES=true
-            shift
-            ;;
-        -v | --verbose )
-            VERBOSE=$((VERBOSE + 1))
-            shift
-            ;;
-        -w | --wait )
-            outputToSubler_Wait
-            exit 0
-            ;;
-        --rm )
-            finalDelete
-            exit 0
-            ;;
-        -d | --dup )
-            showMKVFiles
-            exit 0
-            ;;
-        -h | --help )
-            usage
-            exit 0
-            ;;
-        -- )
-            shift
-            break
-            ;;
-        * )
-            outputToSubler_NoWait
-            ;;
-    esac
+	case "${1}" in
+	-s | --send)
+		outputToSubler_NoWait
+		exit 0
+		;;
+	-n | --dry-run)
+		DRY_RUN=true
+		shift
+		;;
+	-y | --yes)
+		AUTO_YES=true
+		shift
+		;;
+	-v | --verbose)
+		VERBOSE=$((VERBOSE + 1))
+		shift
+		;;
+	-w | --wait)
+		outputToSubler_Wait
+		exit 0
+		;;
+	--rm)
+		finalDelete
+		exit 0
+		;;
+	-d | --dup)
+		showMKVFiles
+		exit 0
+		;;
+	-h | --help)
+		usage
+		exit 0
+		;;
+	--)
+		shift
+		break
+		;;
+	*)
+		outputToSubler_NoWait
+		;;
+	esac
 done
 
 exit 0

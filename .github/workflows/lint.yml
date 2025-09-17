@@ -11,38 +11,38 @@ on:
 
 jobs:
   shell-lint:
+    permissions:
+      # To write linting fixes
+      contents: write
+      # To write Super-linter status checks
+      statuses: write
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-
-      # Use an action for ShellCheck to avoid apt installs and speed up setup
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@v1
+      - uses: actions/checkout@v5
         with:
-          args: mkvnmp4
+          fetch-depth: 0
+          persist-credentials: false
 
-      # Install shfmt via go but cache Go build and module cache to speed repeated runs
-      - name: Setup Go
-        uses: actions/setup-go@v4
+      - name: Run Super-Linter (shellcheck + shfmt)
+        uses: super-linter/super-linter@v8.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_BASH: true
+          VALIDATE_SHELL_SHFMT: true
+          DEFAULT_BRANCH: master
+          # Only run linters for changed files by default; set to true to lint whole repo
+          VALIDATE_ALL_CODEBASE: false
+
+      - name: Commit and push linting fixes
+        # Run only on:
+        # - Pull requests
+        # - Not on the default branch
+        if: >
+          github.event_name == 'pull_request' &&
+          github.ref_name != github.event.repository.default_branch
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          go-version: '1.21'
-
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ${{ runner.os }}-go
-            ${{ env.GOFLAGS }}
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Install shfmt (cached)
-        run: |
-          mkdir -p "$HOME/go/bin"
-          GOBIN="$HOME/go/bin" go install mvdan.cc/sh/v3/cmd/shfmt@v3.6.3
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
-      - name: Run shfmt (check)
-        run: shfmt -d . || true
+          branch: ${{ github.event.pull_request.head.ref || github.head_ref || github.ref }}
+          commit_message: "chore: fix linting issues"
+          commit_user_name: super-linter

@@ -2,9 +2,10 @@
 # Python
 venv/
 __pycache__/
+__pycache__
 *.py[cod]
 *.pyo
-*.pyd
+*.pyds
 .Python
 env/
 build/

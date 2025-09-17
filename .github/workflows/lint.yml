@@ -14,15 +14,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
-      - name: Install shfmt
+
+      # Use an action for ShellCheck to avoid apt installs and speed up setup
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@v1
+        with:
+          args: mkvnmp4
+
+      # Install shfmt via go but cache Go build and module cache to speed repeated runs
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ${{ runner.os }}-go
+            ${{ env.GOFLAGS }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install shfmt (cached)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y golang-go
-          go install mvdan.cc/sh/v3/cmd/shfmt@latest
+          mkdir -p "$HOME/go/bin"
+          GOBIN="$HOME/go/bin" go install mvdan.cc/sh/v3/cmd/shfmt@v3.6.3
           echo "$HOME/go/bin" >> $GITHUB_PATH
-      - name: Run shellcheck
-        run: shellcheck mkvnmp4
+
       - name: Run shfmt (check)
         run: shfmt -d . || true

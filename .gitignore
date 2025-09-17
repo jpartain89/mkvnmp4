@@ -1,1 +1,48 @@
-venv
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+build/
+dist/
+eggs/
+*.egg-info/
+.pytest_cache/
+coverage.xml
+htmlcov/
+
+# macOS
+.DS_Store
+
+# Editor directories
+.vscode/
+.idea/
+
+# Environment files
+.env
+.venv
+
+# Logs and temporary files
+*.log
+tmp/
+*.tmp
+*.swp
+
+# Shell / tests
+*.as
+*.asc
+*.out
+*.err
+*.bak
+
+# Bats test artifacts
+bats-report.html
+
+# Homebrew shfmt/shellcheck cache (if any)
+.cache/shfmt/
+.cache/shellcheck/
+

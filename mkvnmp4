@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091
-set -e
+set -euo pipefail
 
 # Copyright © 2018-2020 JPCDI, JPartain89 and Justin Partain
 #
@@ -74,16 +74,20 @@ Exiting now.
     exit 1
 fi
 
-# This tests for gnu-getopt, as thats needed to run
-if [ -f /usr/local/opt/gnu-getopt/bin/getopt ]; then
+# Ensure required config variables are present
+if [ -z "${DRIVES+x}" ]; then
+    die "Configuration error: DRIVES is not set in the configuration file. Please define DRIVES as an array, e.g. DRIVES=(/media/movies)"
+fi
+
+# This tests for gnu-getopt, as that's needed to run
+if [ -x /usr/local/opt/gnu-getopt/bin/getopt ]; then
     GETOPT="/usr/local/opt/gnu-getopt/bin/getopt"
-    if [ "$("$GETOPT" --test; echo $?)" != 4 ]; then
-        die "You seem to have the wrong version of gnu-getopt?
-        Please investigate and have the proper one installed."
+    # --test returns success on a compatible gnu-getopt; check its exit status
+    if ! "$GETOPT" --test >/dev/null 2>&1 ; then
+        die "You seem to have the wrong version of gnu-getopt. Please investigate and have the proper one installed."
     fi
 else
-    die "Seems you're missing the required gnu-getopt program.
-    Please install using brew install gnu-getopt."
+    die "Seems you're missing the required gnu-getopt program. Please install using 'brew install gnu-getopt'."
 fi
 
 # This block is meant to stop usage on Linux Machines, as I've only tested
@@ -92,13 +96,12 @@ if [[ "$(uname)" == "Darwin" ]]; then
     COUNTER=0
     for f in "${DRIVES[@]}"; do
         if [ -d "$f" ]; then
-            COUNTER=$((COUNTER +1 ))
-        fi
-        if [ "${COUNTER}" == 0 ]; then
-            die "Your configured drives are not present.
-            You need to get the drives mounted before we can continue."
+            COUNTER=$((COUNTER + 1))
         fi
     done
+    if [ "${COUNTER}" -eq 0 ]; then
+        die "Your configured drives are not present. You need to get the drives mounted before we can continue."
+    fi
     unset f
     unset COUNTER
 else
@@ -110,41 +113,69 @@ TIMEOUT_WAIT="${WAIT_TIMEOUT:-600}"
 RED=$(tput setaf 1)
 NORMAL=$(tput sgr 0)
 
+# CLI flags
+DRY_RUN=false
+AUTO_YES=false
+VERBOSE=0
+
+function logv() {
+    # verbose logging
+    if [ "${VERBOSE}" -gt 0 ]; then
+        printf '%s\n' "$*"
+    fi
+}
+
+function info() {
+    printf '%s\n' "$*"
+}
+
+function warn() {
+    printf '%s\n' "$*" >&2
+}
+
 function press_enter() {
     echo ""
+    if [ "${AUTO_YES}" = true ]; then
+        logv "Auto-confirm enabled; continuing."
+        return 0
+    fi
     echo -n "Press Enter to Continue..."
     read -r
 }
 
 function usage() {
 cat << EOF
-${PROGRAM_NAME} [ -s | --send ] or  [ -w | -- wait ]
-             |--[ --rm ]
-             |--[ --dup ]
-             |--[ -v ]
-             |--[ -h | --help ]
+${PROGRAM_NAME} [ -s | --send ] | [ -w | --wait ]
+            [ -n | --dry-run ]
+            [ -y | --yes ]
+            [ -v | --verbose ]
+            [ -d | --dup ]
+            [ -h | --help ]
 
-      -s | --send : Send to Subler
-            -- or --
-      -w | --wait : Tells Subler to wait between jobs in order to auto
-                  : delete the duplicates.
-                  : Much safer than -rm below.
+            -n | --dry-run : Show actions but don't modify files or call Subler
+            -y | --yes     : Assume yes for prompts (non-interactive)
 
-        --rm       : Remove duplicate MKV's that also have mp4
-        --dup      : Show Duplicates
-      -h | --help : This Help
-        -v        : Increase the verbosity
+            -s | --send : Send to Subler
+                        -- or --
+            -w | --wait : Tells Subler to wait between jobs in order to auto
+                                    : delete the duplicates.
+                                    : Much safer than -rm below.
 
-    This program is to send mkv files to Subler using Apple's AppleScript automation backend.
+             --rm           : Remove duplicate MKV's that also have mp4
+             --dup          : Show Duplicates
+             -h | --help    : This Help
+             -v | --verbose : Increase the verbosity
 
-    When using -w or --wait, we will sit and wait until the current item is finished
-      processing in Subler. At that point, the original mkv file gets moved to the trash.
+        This program is to send mkv files to Subler using Apple's AppleScript automation backend.
 
-    The amount of time before timeout is reached can be adjusted using the variable WAIT_TIMEOUT.
-      The amount of time is in seconds, so WAIT_TIMEOUT=600 would be a timeout of 5 minutes.
-      If you find that Subler tends to take longer for you, you're welcome to change that.
+        When using -w or --wait, we will sit and wait until the current item is finished
+            processing in Subler. At that point, the original mkv file gets moved to the trash.
 
-    -s | --send is the default option, if you don't have any CLI flags.
+        The amount of time before timeout is reached can be adjusted using the variable WAIT_TIMEOUT.
+            The amount of time is in seconds, so WAIT_TIMEOUT=600 would be a timeout of 5 minutes.
+            If you find that Subler tends to take longer for you, you're welcome to change that.
+
+        -s | --send is the default option, if you don't have any CLI flags.
 EOF
 }
 
@@ -157,16 +188,19 @@ EOF
 
 # This is the entire find command line for`mkv`
 function findCMDmkv() {
+    local dir
     find -s "${f}" -maxdepth 4 -type f \( -iname "*.mkv" -and ! -iname "*recycle*" \) -print0 |
         while IFS= read -rd '' dir; do echo "$dir"; done
 }
 # This is the entire find command line for `m4v`
 function findCMDm4v() {
+    local dir
     find -s "${f}" -maxdepth 4 -type f \( -iname "*.m4v" -and ! -iname "*recycle*" \)  -print0 |
         while IFS= read -rd '' dir; do echo "$dir"; done
 }
 
 function outputMKVFiles() {
+    local file y
     while IFS= read -r file; do
         y="${file%.mkv}.mp4"
         if [[ -e ${y} ]]; then
@@ -186,68 +220,111 @@ function outputMKVFiles() {
 function outputToSubler_NoWait() {
     # This bit of scripting runs through AppleScript to Subler
     # without the waiting and Moving to Trash step
+    local file y f
     for f in "${DRIVES[@]}"; do
         echo "Running through the ${f} directory"
         echo "         ######################      "
+        # collect files for this drive into a batch
+        batch=()
         while IFS= read -r file; do
             y="${file%.mkv}.mp4"
             if [[ ! -e ${y} ]]; then
                 echo ""
                 echo "${file} ${RED}<--THIS ONE${NORMAL}"
-                osascript -e "
-                    set filePath to (POSIX file \"${file}\" as alias)
-                    tell application \"Subler\"
-                        add to queue filePath
-                        start queue
-                    end tell"
+                batch+=("${file}")
             fi
         done < <(findCMDmkv)
         unset y
+
         while IFS= read -r file; do
             y="${file%.m4v}.mp4"
             if [[ ! -e ${y} ]]; then
                 echo ""
                 echo "${file} ${RED}<--THIS ONE${NORMAL}"
-                osascript -e "
-                    set filePath to (POSIX file \"${file}\" as alias)
-                    tell application \"Subler\"
-                    add to queue filePath
-                    start queue
-                end tell"
+                batch+=("${file}")
             fi
         done < <(findCMDm4v)
         unset y
+
+        if [ ${#batch[@]} -gt 0 ]; then
+            if [ "${DRY_RUN}" = true ]; then
+                info "DRY-RUN: would enqueue ${#batch[@]} files to Subler for drive ${f}"
+            else
+                # Write an AppleScript that enqueues all files in the batch and starts the queue once.
+                tmp_as=$(mktemp "/tmp/${PROGRAM_NAME}_as.XXXXXX")
+                printf 'set files to {' >"${tmp_as}"
+                first=true
+                for bf in "${batch[@]}"; do
+                    esc=${bf//\"/\\\"}
+                    if [ "${first}" = true ]; then
+                        printf 'POSIX file "%s"' "${esc}" >>"${tmp_as}"
+                        first=false
+                    else
+                        printf ', POSIX file "%s"' "${esc}" >>"${tmp_as}"
+                    fi
+                done
+                printf '}\n' >>"${tmp_as}"
+                cat >>"${tmp_as}" <<'AS'
+tell application "Subler"
+  repeat with f in files
+    add to queue f
+  end repeat
+  start queue
+end tell
+AS
+                # Run the AppleScript
+                if ! osascript "${tmp_as}"; then
+                    warn "Batch AppleScript failed for drive ${f}; falling back to per-file enqueues"
+                    for bf in "${batch[@]}"; do
+                        osascript -e "
+                            set filePath to (POSIX file \"${bf}\" as alias)
+                            tell application \"Subler\"
+                            add to queue filePath
+                            start queue
+                        end tell"
+                    done
+                fi
+                rm -f -- "${tmp_as}"
+            fi
+        fi
+        unset batch
     done
 }
 
 function outputToSubler_Wait() {
     # This bit of scripting runs through AppleScript to Subler
-    for f in "${DRIVES[@]}"; do echo "${f}";
-    while IFS= read -r file; do
-        y="${file%.mkv}.mp4"
-        if [[ ! -e ${y} ]]; then
+    local file y f
+    for f in "${DRIVES[@]}"; do
+        echo "${f}"
+        while IFS= read -r file; do
+            y="${file%.mkv}.mp4"
+            if [[ ! -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
-            osascript -e "
-                set filePath to (POSIX file \"${file}\" as alias)
-                set TimeOutWait to \"${TIMEOUT_WAIT}\"
-                tell application \"Subler\"
-                    with timeout of TimeOutWait seconds
-                    add to queue filePath
-                    start queue and wait
-                    tell application \"Finder\"
-                        if exists file filePath then
-                            delete file filePath
-                        end if
-                    end tell
-                    end timeout
-                end tell"
+            if [ "${DRY_RUN}" = true ]; then
+                info "DRY-RUN: would enqueue and wait for ${file} and then delete original"
+            else
+                osascript -e "
+                    set filePath to (POSIX file \"${file}\" as alias)
+                    set TimeOutWait to \"${TIMEOUT_WAIT}\"
+                    tell application \"Subler\"
+                        with timeout of TimeOutWait seconds
+                        add to queue filePath
+                        start queue and wait
+                        tell application \"Finder\"
+                            if exists file filePath then
+                                delete file filePath
+                            end if
+                        end tell
+                        end timeout
+                    end tell"
+            fi
         fi
-    done < <(findCMDmkv)
+        done < <(findCMDmkv)
     unset y
-    while IFS= read -r file; do
-        y="${file%.m4v}.mp4"
-        if [[ ! -e ${y} ]]; then
+        while IFS= read -r file; do
+            y="${file%.m4v}.mp4"
+            if [[ ! -e ${y} ]]; then
             echo ""
             echo "${file} ${RED}<--THIS ONE${NORMAL}"
             osascript -e "
@@ -265,19 +342,27 @@ function outputToSubler_Wait() {
                 end tell
             end tell"
         fi
-    done < <(findCMDm4v)
-    unset y
+        done < <(findCMDm4v)
+        unset y
     done
 }
 
 function confirmDel() {
-    if [[ "${z}" != "" ]]; then
-        for file in ${z[*]}; do
+    if [[ ${#z[@]} -gt 0 ]]; then
+        if [ "${DRY_RUN}" = true ]; then
+            info "DRY-RUN: would erase ${#z[@]} files"
+            for file in "${z[@]}"; do
+                printf '%s\n' "${RED}Would erase: ${file}${NORMAL}"
+            done
+            unset z
+            return 0
+        fi
+
+        for file in "${z[@]}"; do
             echo "${RED}Erasing ${file}...${NORMAL}"
             echo ""
-            press_enter &&
-            rm -f "${file}"
-            unset "${z[file]}"
+            press_enter
+            rm -f -- "${file}"
         done
         unset z
     else
@@ -321,7 +406,7 @@ This is the safe line!
 ${file%.mkv}.mp4
 ###########################################################
 EOF
-        z+=("${file}")
+    z+=("${file}")
 
         fi
     done < <(findCMDmkv)
@@ -341,20 +426,19 @@ EOF
         fi
     done < <(findCMDm4v)
     unset y
-    export z="${z[@]}"
+    # keep z as an array for downstream usage
 }
 
 # This is the block that goes through and finalizes the removal
 # of the duplicated files, removing the mkv or m4v files.
 function kShowOutPut() {
-    if [[ ShowOutPut != "" ]]; then
-IFS=
-for i in "${z[@]}"; do
-    echo "${RED}Deleting ${i}${NORMAL}"
-    echo ""
-done
+    if [[ ${#z[@]} -gt 0 ]]; then
+        for i in "${z[@]}"; do
+            echo "${RED}Deleting ${i}${NORMAL}"
+            echo ""
+        done
 
-cat << EOF
+        cat << EOF
 
 Please, examine the above files to confirm they are ready to be removed.
 
@@ -362,10 +446,12 @@ The next step is ${RED}"nuclear"${NORMAL}, as there is no going back after files
 Usually....
 
 EOF
-        press_enter &&
-        confirmDel &&
+        press_enter
+        confirmDel
         echo "Finished Deleting...."
         echo ""
+    else
+        echo "No files queued for deletion."
     fi
 }
 
@@ -386,10 +472,10 @@ function showMKVFiles() {
 }
 
 # These are declaring our command line flags for getopt lower down
-SHORT=swh
-LONG=send,wait,rm,dup,help
+#SHORT=swhnyv
+#LONG=send,wait,rm,dup,help,dry-run,yes,verbose
 
-OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
+#OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
 
 if [ $# == 0 ]; then
     outputToSubler_NoWait && exit 0
@@ -399,13 +485,25 @@ if [ $? != 0 ] ; then
     die "Failed to parse options...exiting." >&2
 fi
 
-eval set -- "${OPTS}"
+#eval set -- "${OPTS}"
 
 while true; do
     case "$1" in
         -s | --send )
             outputToSubler_NoWait
             exit 0
+            ;;
+        -n | --dry-run )
+            DRY_RUN=true
+            shift
+            ;;
+        -y | --yes )
+            AUTO_YES=true
+            shift
+            ;;
+        -v | --verbose )
+            VERBOSE=$((VERBOSE + 1))
+            shift
             ;;
         -w | --wait )
             outputToSubler_Wait
@@ -415,7 +513,7 @@ while true; do
             finalDelete
             exit 0
             ;;
-        --dup )
+        -d | --dup )
             showMKVFiles
             exit 0
             ;;

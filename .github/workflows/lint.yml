@@ -1,0 +1,21 @@
+name: Lint
+
+on: [push, pull_request]
+
+jobs:
+  shell-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Install shfmt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y golang-go
+          go install mvdan.cc/sh/v3/cmd/shfmt@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+      - name: Run shellcheck
+        run: shellcheck mkvnmp4
+      - name: Run shfmt (check)
+        run: shfmt -d . || true

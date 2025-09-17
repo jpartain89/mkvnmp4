@@ -27,7 +27,6 @@ set -euo pipefail
 # Program information
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROGRAM_NAME="mkvnmp4"
-VERSION="4.5.1"
 
 function die() {
     echo "${PROGRAM_NAME}: $1" >&2
@@ -49,7 +48,7 @@ command -v "${PROGRAM_NAME}" 1>/dev/null 2>&1 || {
 # This block is to "source" the configuration file.
 if [ -f /etc/mkvnmp4.conf ]; then
     source /etc/mkvnmp4.conf
-elif [ -f  /etc/mkvnmp4/mkvnmp4.conf ]; then
+elif [ -f /etc/mkvnmp4/mkvnmp4.conf ]; then
     source /etc/mkvnmp4/mkvnmp4.conf
 elif [ -f ~/.mkvnmp4.conf ]; then
     source "${HOME}/.mkvnmp4.conf"
@@ -472,61 +471,61 @@ function showMKVFiles() {
 }
 
 # These are declaring our command line flags for getopt lower down
-#SHORT=swhnyv
-#LONG=send,wait,rm,dup,help,dry-run,yes,verbose
+SHORT=swhnyv
+LONG=send,wait,rm,dup,help,dry-run,yes,verbose
 
-#OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
+OPTS=$(${GETOPT} --options ${SHORT} --long ${LONG} --name "$0" -- "$@")
 
-if [ $# == 0 ]; then
-    outputToSubler_NoWait && exit 0
-fi
+#if [ "${OPTS}" == 0 ]; then
+#    outputToSubler_NoWait && exit 0
+#fi
 
-if [ $? != 0 ] ; then
-    die "Failed to parse options...exiting." >&2
-fi
+#if [ $? != 0 ] ; then
+#    die "Failed to parse options...exiting." >&2
+#fi
 
-#eval set -- "${OPTS}"
+eval set -- "${OPTS}"
 
 while true; do
-    case "$1" in
+    case "${1}" in
         -s | --send )
-            outputToSubler_NoWait
-            exit 0
+            outputToSubler_NoWait;
+            exit 0;
             ;;
         -n | --dry-run )
-            DRY_RUN=true
-            shift
+            DRY_RUN=true;
+            shift;
             ;;
         -y | --yes )
-            AUTO_YES=true
-            shift
+            AUTO_YES=true;
+            shift;
             ;;
         -v | --verbose )
-            VERBOSE=$((VERBOSE + 1))
-            shift
+            VERBOSE=$((VERBOSE + 1));
+            shift;
             ;;
         -w | --wait )
-            outputToSubler_Wait
-            exit 0
+            outputToSubler_Wait;
+            exit 0;
             ;;
         --rm )
-            finalDelete
-            exit 0
+            finalDelete;
+            exit 0;
             ;;
         -d | --dup )
-            showMKVFiles
-            exit 0
+            showMKVFiles;
+            exit 0;
             ;;
         -h | --help )
-            usage
-            exit 0
+            usage;
+            exit 0;
             ;;
         -- )
-            shift
-            break
+            shift;
+            break;
             ;;
         * )
-            outputToSubler_NoWait
+            outputToSubler_NoWait;
             ;;
     esac
 done

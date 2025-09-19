@@ -31,8 +31,8 @@ PROGRAM_NAME="mkvnmp4"
 # Early argument handling: allow printing help without loading config or requiring getopt
 for __arg in "$@"; do
 	case "${__arg}" in
-		-h|--help)
-			cat <<'HELP'
+	-h | --help)
+		cat <<'HELP'
 Usage: mkvnmp4 [--send | --wait] [--dry-run] [--yes] [--verbose] [--dup] [--rm]
 
 Run mkv -> mp4 helper actions (enqueue to Subler, list duplicates, remove duplicates).
@@ -47,17 +47,17 @@ Options:
   -d, --dup     Show duplicates
   --rm          Remove duplicates
 HELP
-			exit 0
-			;;
-		-n|--dry-run)
-			# when running in dry-run mode early, it's OK if drives aren't mounted
-			SKIP_DRIVE_CHECK=1
-			;;
-		-d|--dup)
-			# duplicates listing should not require drives to be mounted; enable dry-run and skip strict check
-			SKIP_DRIVE_CHECK=1
-			DRY_RUN=true
-			;;
+		exit 0
+		;;
+	-n | --dry-run)
+		# when running in dry-run mode early, it's OK if drives aren't mounted
+		SKIP_DRIVE_CHECK=1
+		;;
+	-d | --dup)
+		# duplicates listing should not require drives to be mounted; enable dry-run and skip strict check
+		SKIP_DRIVE_CHECK=1
+		DRY_RUN=true
+		;;
 	esac
 done
 
@@ -99,10 +99,10 @@ for cfg in "${CONFIG_CANDIDATES[@]}"; do
 				line="${line%%"${line##*[![:space:]]}"}"
 				[ -z "${line}" ] && continue
 				case "${line}" in
-					\#*) continue ;; # comment
+				\#*) continue ;; # comment
 				esac
 				DRIVES+=("${line}")
-			done < "${cfg}"
+			done <"${cfg}"
 		fi
 		CONFIG_FOUND=1
 		break

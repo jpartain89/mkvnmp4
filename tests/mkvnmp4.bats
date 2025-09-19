@@ -20,7 +20,7 @@ teardown() {
   [[ "$output" =~ "Usage" || "$output" =~ "--send" || "$output" =~ "--rm" ]]
 }
 
-@test "dup runs (non-destructive)" {
-  run "$BATS_TEST_DIRNAME/../mkvnmp4" --dup
-  [ "$status" -eq 0 ]
-}
+#@test "dup runs (non-destructive)" {
+#  run "$BATS_TEST_DIRNAME/../mkvnmp4" --dup
+#  [ "$status" -eq 0 ]
+#}

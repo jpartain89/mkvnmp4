@@ -9,8 +9,9 @@ on:
   pull_request:
 
 jobs:
-  python-tests:
-    runs-on: ubuntu-latest
+  python-tests-macos:
+    name: Python tests (macOS)
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -18,7 +19,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cache/pip
+            ~/Library/Caches/pip
             .venv
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}-py3.10
           restore-keys: |
@@ -29,7 +30,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Create venv and install deps
+      - name: Create venv and install deps (macOS)
         run: |
           python -m venv .venv
           source .venv/bin/activate
@@ -45,23 +46,25 @@ jobs:
           source .venv/bin/activate
           pytest -q
 
-  bats-tests:
-    runs-on: ubuntu-latest
+  bats-tests-macos:
+    name: Bats tests (macOS)
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache apt archives
+      - name: Cache Homebrew downloads
         uses: actions/cache@v4
         with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-${{ hashFiles('**/tests/mkvnmp4.bats') }}
+          path: |
+            /Users/runner/Library/Caches/Homebrew
+          key: ${{ runner.os }}-homebrew-${{ hashFiles('**/tests/mkvnmp4.bats') }}
           restore-keys: |
-            ${{ runner.os }}-apt-
+            ${{ runner.os }}-homebrew-
 
-      - name: Install bats
+      - name: Install bats (Homebrew)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y bats
+          brew update
+          brew install bats-core
 
       - name: Run bats
         run: |
@@ -69,6 +72,7 @@ jobs:
           tests/mkvnmp4.bats
 
   macos-smoke:
+    name: macOS smoke (verify python import)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4

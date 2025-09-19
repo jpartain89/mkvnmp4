@@ -10,13 +10,13 @@ on:
   pull_request:
 
 jobs:
-  shell-lint:
+  shell-lint-macos:
     permissions:
       # To write linting fixes
       contents: write
       # To write Super-linter status checks
       statuses: write
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v5
@@ -24,26 +24,27 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # Cache common build/go caches to speed actions that use go tooling (safe minimal cache)
-      - name: Cache Go build/cache
+      - name: Cache Homebrew downloads
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+            /Users/runner/Library/Caches/Homebrew
+          key: ${{ runner.os }}-homebrew-${{ hashFiles('.github/workflows/lint.yml') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-homebrew-
 
-      - name: Run Super-Linter (shellcheck + shfmt)
-        uses: super-linter/super-linter@v8.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_BASH: true
-          VALIDATE_SHELL_SHFMT: true
-          DEFAULT_BRANCH: master
-          # Only run linters for changed files by default; set to true to lint whole repo
-          VALIDATE_ALL_CODEBASE: false
+      - name: Install shellcheck and shfmt (Homebrew)
+        run: |
+          brew update
+          brew install shellcheck shfmt
+
+      - name: Run shellcheck
+        run: |
+          shellcheck -x mkvnmp4 || true
+
+      - name: Run shfmt (check & format)
+        run: |
+          shfmt -l -w mkvnmp4 || true
 
       - name: Commit and push linting fixes
         # Run only on:

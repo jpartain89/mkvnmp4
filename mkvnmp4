@@ -237,10 +237,10 @@ ${PROGRAM_NAME} [ -s | --send ] | [ -w | --wait ]
                                     : delete the duplicates.
                                     : Much safer than -rm below.
 
-             --rm           : Remove duplicate MKV's that also have mp4
-             --dup          : Show Duplicates
-             -h | --help    : This Help
-             -v | --verbose : Increase the verbosity
+            --rm           : Remove duplicate MKV's that also have mp4
+            --dup          : Show Duplicates
+            -h | --help    : This Help
+            -v | --verbose : Increase the verbosity
 
         This program is to send mkv files to Subler using Apple's AppleScript automation backend.
 
@@ -248,8 +248,8 @@ ${PROGRAM_NAME} [ -s | --send ] | [ -w | --wait ]
             processing in Subler. At that point, the original mkv file gets moved to the trash.
 
         The amount of time before timeout is reached can be adjusted using the variable WAIT_TIMEOUT.
-            The amount of time is in seconds, so WAIT_TIMEOUT=600 would be a timeout of 5 minutes.
-            If you find that Subler tends to take longer for you, you're welcome to change that.
+        The amount of time is in seconds, so WAIT_TIMEOUT=600 would be a timeout of 5 minutes.
+        If you find that Subler tends to take longer for you, you're welcome to change that.
 
         -s | --send is the default option, if you don't have any CLI flags.
 EOF

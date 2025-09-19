@@ -1,0 +1,107 @@
+name: Tests
+
+on:
+  schedule:
+    - cron: '45 5 * * *'
+  push:
+    branches: [ "main" ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+
+jobs:
+  python-tests-macos:
+    name: Python tests (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache pip and venv
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/pip
+            .venv
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}-py3.10
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Create venv and install deps (macOS)
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          else
+            pip install pytest
+          fi
+
+      - name: Run pytest
+        run: |
+          source .venv/bin/activate
+          pytest -q
+
+  bats-tests-macos:
+    name: Bats tests (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            /Users/runner/Library/Caches/Homebrew
+          key: ${{ runner.os }}-homebrew-${{ hashFiles('**/tests/mkvnmp4.bats') }}
+          restore-keys: |
+            ${{ runner.os }}-homebrew-
+
+      - name: Install bats (Homebrew)
+        run: |
+          brew update
+          brew install bats-core
+
+      - name: Run bats
+        run: |
+          chmod +x tests/mkvnmp4.bats
+          tests/mkvnmp4.bats
+
+  macos-smoke:
+    name: macOS smoke (verify python import)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache pip on macOS
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/pip
+            .venv
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}-py3.10
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Set up Python on macOS
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Create venv and install deps (macOS)
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
+
+      - name: Verify python script loads
+        run: |
+          source .venv/bin/activate
+          python3 -c "import mkvnmp4; print('OK')"

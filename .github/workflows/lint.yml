@@ -1,21 +1,60 @@
 name: Lint
 
-on: [push, pull_request]
+on:
+  schedule:
+    - cron: '45 5 * * *'
+  push:
+    branches: [ "main" ]
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
+  pull_request:
 
 jobs:
-  shell-lint:
-    runs-on: ubuntu-latest
+  shell-lint-macos:
+    permissions:
+      # To write linting fixes
+      contents: write
+      # To write Super-linter status checks
+      statuses: write
+    runs-on: macos-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
-      - name: Install shfmt
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            /Users/runner/Library/Caches/Homebrew
+          key: ${{ runner.os }}-homebrew-${{ hashFiles('.github/workflows/lint.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-homebrew-
+
+      - name: Install shellcheck and shfmt (Homebrew)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y golang-go
-          go install mvdan.cc/sh/v3/cmd/shfmt@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
+          brew update
+          brew install shellcheck shfmt
+
       - name: Run shellcheck
-        run: shellcheck mkvnmp4
-      - name: Run shfmt (check)
-        run: shfmt -d . || true
+        run: |
+          shellcheck -x mkvnmp4 || true
+
+      - name: Run shfmt (check & format)
+        run: |
+          shfmt -l -w mkvnmp4 || true
+
+      - name: Commit and push linting fixes
+        # Run only on:
+        # - Pull requests
+        # - Not on the default branch
+        if: >
+          github.event_name == 'pull_request' &&
+          github.ref_name != github.event.repository.default_branch
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          branch: ${{ github.event.pull_request.head.ref || github.head_ref || github.ref }}
+          commit_message: "chore: fix linting issues"
+          commit_user_name: super-linter

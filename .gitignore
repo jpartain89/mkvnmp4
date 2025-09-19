@@ -1,29 +1,49 @@
+
+# Python
+venv/
+__pycache__/
+__pycache__
+*.py[cod]
+*.pyo
+*.pyds
+.Python
+env/
+build/
+dist/
+eggs/
+*.egg-info/
+.pytest_cache/
+coverage.xml
+htmlcov/
+
+# macOS
 .DS_Store
-.DS_Store?
-.AppleDouble
-.LSOverride
-auto-git.log
 
-# Icon must end with two 
-Icon
+# Editor directories
+.vscode/
+.idea/
 
-# Thumbnails
-._*
+# Environment files
+.env
+.venv
 
-# Files that might appear in the root of a volume
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
-
+# Logs and temporary files
 *.log
+tmp/
+*.tmp
+*.swp
+
+# Shell / tests
+*.as
+*.asc
+*.out
+*.err
+*.bak
+
+# Bats test artifacts
+bats-report.html
+
+# Homebrew shfmt/shellcheck cache (if any)
+.cache/shfmt/
+.cache/shellcheck/
+
